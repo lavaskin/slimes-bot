@@ -1,4 +1,4 @@
-# Botty
+# Slimes
 *By Lavaskin*
 
 **How to use**:
@@ -11,7 +11,7 @@
 - General form: ./run <mode> <gen_amount [optional]> <c [optional]>
 - Modes:
 	- bot: Runs in discord bot mode
-	- gen: Creates a given amount of random NFT's. Default of 100. Also defaults to randomly picking between the 3 different types of NFT's included, but this can be changed by swapping the called function in main to something like genSlime().
+	- gen: Creates a given amount of random NFT's. Default of 100. Useful for testing out generation code.
 - gen_amount is any integer. Dictates how many NFT's are created in gen mode.
 - If 'c' is the last argument, the script will remove the old output image directories and create new empty ones. NOTE: this removes the generated images locally, but they will still persist in the database. This will break the view command described below.
 - Example commands:
@@ -22,12 +22,11 @@
 
 **Discord Bot Commands (Prefix: b!)**:
 - help: Lists out basic descriptions for commands.
-- gen <type [optional]>: Generates a random "NFT". Default generates a slime NFT and posts it. Given an optional argument of the type (dots, planets or slime), it will create that type instead.
+- gen: Generates a random "NFT" slime. 30 minute cooldown.
 - view <id>: Queries the slimes and replies with an embed containing the matching one if it exists.
 - [WIP] inv: Shows a navigatable embed menu with reaction buttons to scroll through owned slimes.
 
 **TODO**
-- Timer for NFT generation.
 - Database integration for "owning" an NFT
 	- Trading with others
 	- Viewing your owned NFT's

@@ -26,7 +26,12 @@ prefix = 'b!'
 activity = discord.Activity(type=discord.ActivityType.listening, name="b!help")
 bot = commands.Bot(command_prefix=prefix, activity=activity)
 width, height = 200, 200
-genCooldown = 1800 # in seconds (30m)
+genCooldown = 2 # in seconds (30m = 1800s)
+
+# Initialize database
+firebase_admin.initialize_app(dbCred)
+db = firestore.client()
+print(' > Setup firestore.')
 
 # Load colors
 colors = []
@@ -46,14 +51,7 @@ _bodies     = countFiles('./res/parts/slimes/bodies/')
 _eyes       = countFiles('./res/parts/slimes/face/eyes/')
 _mouths     = countFiles('./res/parts/slimes/face/mouths/')
 _hats       = countFiles('./res/parts/slimes/hats/')
-_dots       = countFiles('./nfts/dots/')    # Index: 0
-_planets    = countFiles('./nfts/planets/') # Index: 1
 print(' > Counted files.')
-
-# Initialize database
-firebase_admin.initialize_app(dbCred)
-db = firestore.client()
-print(' > Setup firestore.')
 
 
 #####################
@@ -67,9 +65,60 @@ def checkUser(author, userID):
 
 	if not ref.get().exists:
 		# Make document
-		data = {'slimes': [],'timestamp': ''}
+		data = {'slimes': []}
 		ref.set(data)
 		print('| Registered: {0} ({1})'.format(author, userID))
+
+# Encodes a given slime ID into a more readable compact form
+def encodeSlimeID(id):
+	enc = ''
+	for n in id.split('-'):
+		if n == 'X':
+			enc += '!'
+		else:
+			enc += encodeNum(int(n))
+	return enc
+
+# Encodes a single number
+def encodeNum(n):
+    if n < 10:
+        return str(n)
+    elif n < 36:
+        return chr(n + 55)
+    else:
+        return chr(n + 61)
+
+# Decodes an encoded slime id to the form they're generated as [Non-public facing]
+def decodeSlimeID(enc):
+	id = ''
+	for c in enc:
+		if c == '!':
+			id += 'X-'
+		else:
+			if ord(c) > 96:
+				id += (str(ord(c) - 61) + '-')
+			elif ord(c) > 64:
+				id += (str(ord(c) - 55) + '-')
+			else:
+				id += (c + '-')
+	id = id[:-1] # remove trailing 'x'
+	return id
+
+# Generates two different paint colors from the global list (RETURNS THEIR INDEX!)
+def getPaintColors():
+	colorCount = len(colors)
+	c1 = random.randrange(0, colorCount)
+	c2 = random.randrange(0, colorCount)
+
+	# Flip paint color if same as bg
+	if c1 == c2:
+		c1 = colorCount - c1 - 1
+	return c1, c2
+
+
+########################
+# Generation Functions #
+########################
 
 # Given a list of files, creates a layered image of them in order
 # Used to smooth te process of making new NFT collections
@@ -91,113 +140,6 @@ def rollLayers(fName, layers, bgColor):
 	# Save the image/close
 	nft.save(fName)
 	nft.close()
-
-# Encodes a given slime ID into a more readable compact form
-def encodeSlimeID(id):
-	enc = ''
-	for n in id.split('-'):
-		if n == 'X':
-			enc += '!'
-		else:
-			enc += encodeNum(int(n))
-	return enc
-
-# Decodes an encoded slime id to the form they're generated as
-# Non-public facing
-def decodeSlimeID(enc):
-	id = ''
-	for c in enc:
-		if c == '!':
-			id += 'X-'
-		else:
-			if ord(c) > 96:
-				id += (str(ord(c) - 61) + '-')
-			elif ord(c) > 64:
-				id += (str(ord(c) - 55) + '-')
-			else:
-				id += (c + '-')
-	id = id[:-1] # remove trailing 'x'
-	return id
-
-# Encodes a single number
-def encodeNum(n):
-    if n < 10:
-        return str(n)
-    elif n < 36:
-        return chr(n + 55)
-    else:
-        return chr(n + 61)
-
-# Checks if a pixel's in-bound or not
-def checkBounds(x, y, maxX, maxY):
-	if x < 0 or x > maxX:
-		return False
-	if y < 0 or y > maxY:
-		return False
-	return True
-
-# Draws a circle of a given size at a random location
-def drawPlanet(nft, pixels, size, color):
-	randX = random.randint(1, nft.size[0] - 2)
-	randY = random.randint(1, nft.size[1] - 2)
-
-	halfSize = int(size / 2)
-
-	# Find upper bound
-	topLeft = [randX - halfSize, randY - halfSize]
-	if topLeft[0] < 0:
-		topLeft[0] = 0
-	if topLeft[1] < 0:
-		topLeft[1] = 0
-
-	# Find lower bound
-	botRight = [randX + halfSize, randY + halfSize]
-	if botRight[0] > nft.size[0] - 1:
-		botRight[0] = nft.size[0]
-	if botRight[1] > nft.size[1] - 1:
-		botRight[1] = nft.size[1]
-
-	# Draw the planet by filling in-between the bounds
-	for i in range(topLeft[0], botRight[0]):
-		for j in range(topLeft[1], botRight[1]):
-			pixels[i, j] = color
-
-# Generates two different paint colors from the global list (RETURNS THEIR INDEX!)
-def getPaintColors():
-	colorCount = len(colors)
-	c1 = random.randrange(0, colorCount)
-	c2 = random.randrange(0, colorCount)
-
-	# Flip paint color if same as bg
-	if c1 == c2:
-		c1 = colorCount - c1 - 1
-	return c1, c2
-
-# Gets the number for the next NFT
-def generateNFTNumber(collection):
-	if collection == 'dots':
-		global _dots
-		_dots += 1
-		return _dots
-	if collection == 'planets':
-		global _planets
-		_planets += 1
-		return _planets
-
-# Generates an nft based on random parameters
-def generateNFT(type):
-	# Check if argument matches an nft type
-	if type == 'slime':
-		return genSlime()
-	if type == 'planets':
-		return genPlanets()
-	if type == 'dots':
-		return genDots()
-
-
-########################
-# Generation Functions #
-########################
 
 # Places layers of randomly chosen elements to make a slime image
 def genSlime():
@@ -275,95 +217,29 @@ def genSlime():
 	return fName
 
 
-# Makes random amounts of planets in various sizes
-def genPlanets():
-	fName = './nfts/planets/planets_{0}.png'.format(generateNFTNumber('planets'))
-
-	# Generate random parameters
-	numPlanets  = random.randint(5, 25)
-	randomSizes = random.randint(0, 2) # 1/3 for random sizes
-	fixedSize   = random.randrange(5, 39, 2)
-	bgColor, paintColor = getPaintColors()
-
-	# Generate the image
-	nft = Image.new(mode='RGB', size=(width, height), color=colors[bgColor])
-	pixels = nft.load()
-
-	# Place planets
-	for i in range(numPlanets):
-		if randomSizes == 0:
-			drawPlanet(nft, pixels, random.randrange(5, 39, 2), colors[paintColor])
-		else:
-			drawPlanet(nft, pixels, fixedSize, colors[paintColor])
-
-	nft.save(fName)
-	nft.close()
-
-	return fName
-
-# Makes an image with 
-def genDots():
-	fName = './nfts/dots/dots_{0}.png'.format(generateNFTNumber('dots'))
-
-	# Generate random parameters
-	paintChance = random.randint(1, 100)
-	bgColor, paintColor = getPaintColors()
-
-	# Generate the image
-	nft = Image.new(mode='RGB', size=(width, height), color=colors[bgColor])
-	pixels = nft.load()
-
-	# Mix the pixels
-	for i in range(1, nft.size[0] - 1):
-		for j in range(1, nft.size[1] - 1):
-			if random.randint(0, paintChance) == 0:
-				pixels[i, j] = colors[paintColor]
-
-	nft.save(fName)
-	nft.close()
-
-	return fName
-
-
 ################
 # Bot Commands #
 ################
 
 # Generates an nft and posts it as a reply
 @bot.command(brief='Generates an NFT', description='Creates a unique "NFT" and replies to the user with it. 30m cooldown.')
-async def gen(ctx, type='slime'):
+@commands.cooldown(1, genCooldown, commands.BucketType.user)
+async def gen(ctx):
 	userID = str(ctx.author.id)
-
 	checkUser(ctx.author, userID)
 
-	# Check if user has used command recently (with slime)
-	if type == 'slime':
-		# Get last generated slime and local time
-		timestamp = db.collection('users').document(userID).get().to_dict()['timestamp']
-		time = datetime.datetime.now().time()
-		
-		# Figure out if it's been 30 minutes
-		# ex: 02:51:25.786564  |  02:51:18.662908
-		# TODO
-
-		if timestamp == '...':
-
-			return
-
 	# Get name/id of generated file
-	fName   = generateNFT(type)
-	nftType = fName[7:fName.rfind('/')]
-	id      = fName[fName.rfind('_') + 1:fName.rfind('.')]
+	fName = genSlime()
+	print(fName)
+	id    = fName[fName.rfind('_') + 1:fName.rfind('.')]
 
 	# Add nft to the database
-	if type == 'slime':
-		ref = db.collection('users').document(userID)
-		ref.update({'slimes': firestore.ArrayUnion([id])})
-		ref.update({'timestamp': str(datetime.datetime.now().time())})
+	ref = db.collection('users').document(userID)
+	ref.update({'slimes': firestore.ArrayUnion([id])})
 
 	# Make embed and send it
 	file = discord.File(fName)
-	embed = discord.Embed(title='{0}#{1} was generated!'.format(nftType, id))
+	embed = discord.Embed(title='slimes#{0} was generated!'.format(id))
 	embed.set_image(url='attachment://' + fName)
 	await ctx.reply(embed=embed, file=file)
 
@@ -399,15 +275,25 @@ async def view(ctx, arg=None):
 #############
 
 @bot.event
+async def on_command_error(ctx, error):
+	if isinstance(error, commands.CommandOnCooldown):
+		# Check if more than 2 minutes remaining
+		if error.retry_after < 121:
+			await ctx.reply('You can use this command again in {0}s.'.format(int(error.retry_after)))
+		else:
+			await ctx.reply('You can use this command again in *{0}minutes*.'.format(int(error.retry_after / 60)))
+	elif isinstance(error, commands.CommandNotFound):
+		await ctx.reply('That command doesn\'t exist!')
+
+@bot.event
 async def on_ready():
 	random.seed()
 	print('> Botty has been turned on:')
 
-def main(genNFTs, amount=100):
-	if genNFTs:
+def main(gen, amount=100):
+	if gen:
 		# For generating mass amounts
 		for i in range(amount):
-			# generateNFT(None)
 			genSlime()
 	else:
 		bot.run(keys['discordToken'])

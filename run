@@ -1,0 +1,33 @@
+#!/bin/bash
+
+make_nft_dirs() {
+	mkdir './nfts'
+	mkdir './nfts/dots'
+	mkdir './nfts/planets'
+	mkdir './nfts/slimes'
+}
+
+# Check if clean is enabled
+# If so, wipe previously generated nft's
+if [[ "$BASH_ARGV" = "c" ]]; then
+	rm -fr './nfts'
+	make_nft_dirs
+fi
+
+# Verify nft folder exists
+if [[ ! -d "./nfts" ]]; then
+	make_nft_dirs
+fi
+
+# Run the bot in a specific mode
+if [[ "$1" = "gen" ]]; then
+	# Check if gen count is provided
+	re='^[0-9]+$'
+	if [[ $2 =~ $re ]]; then
+		python bot.py $1 $2
+	else
+		python bot.py $1
+	fi
+elif [[ "$1" = "bot" ]];then
+	python bot.py
+fi

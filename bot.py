@@ -26,7 +26,7 @@ prefix = 'b!'
 activity = discord.Activity(type=discord.ActivityType.listening, name="b!help")
 bot = commands.Bot(command_prefix=prefix, activity=activity)
 width, height = 200, 200
-genCooldown = 2 # in seconds (30m = 1800s)
+genCooldown = 1800 # in seconds (30m = 1800s)
 
 # Initialize database
 firebase_admin.initialize_app(dbCred)
@@ -143,7 +143,7 @@ def rollLayers(fName, layers, bgColor):
 
 # Places layers of randomly chosen elements to make a slime image
 def genSlime():
-	fName = './nfts/slimes/slimes_'
+	fName = './nfts/slimes/'
 	partDir = './res/parts/slimes/'
 
 	# Loops until a unique ID is created
@@ -228,19 +228,18 @@ async def gen(ctx):
 	userID = str(ctx.author.id)
 	checkUser(ctx.author, userID)
 
-	# Get name/id of generated file
-	fName = genSlime()
-	print(fName)
-	id    = fName[fName.rfind('_') + 1:fName.rfind('.')]
+	# Generate slime and get id
+	path = genSlime()
+	id    = path[path.rfind('/') + 1:path.rfind('.')]
 
 	# Add nft to the database
 	ref = db.collection('users').document(userID)
 	ref.update({'slimes': firestore.ArrayUnion([id])})
 
 	# Make embed and send it
-	file = discord.File(fName)
-	embed = discord.Embed(title='slimes#{0} was generated!'.format(id))
-	embed.set_image(url='attachment://' + fName)
+	file = discord.File(path)
+	embed = discord.Embed(title='slime#{0} was generated!'.format(id))
+	embed.set_image(url='attachment://' + path)
 	await ctx.reply(embed=embed, file=file)
 
 # Replies with an embed showing all of a users *slimes*
@@ -256,11 +255,11 @@ async def view(ctx, arg=None):
 		await ctx.reply('I need a valid ID you fucking idiot.')
 		return
 
-	path = './nfts/slimes/slimes_{0}.png'.format(arg)
+	path = './nfts/slimes/{0}.png'.format(arg)
 	
 	# Check if the slime exists
 	if not exists(path):
-		await ctx.reply('**slimes#{0}** doesn\'t exist!'.format(arg))
+		await ctx.reply('**slime#{0}** doesn\'t exist!'.format(arg))
 		return
 	
 	# Make embed and send it

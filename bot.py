@@ -27,7 +27,6 @@ keys = json.loads(keyFile.read())
 dbCred = credentials.Certificate('./other/firebase.json')
 descFile = open('./other/desc.json')
 desc = json.loads(descFile.read())
-print(desc['inv']['short'])
 
 # Global variables
 width, height = 200, 200
@@ -39,7 +38,6 @@ bot = commands.Bot(command_prefix=prefix, activity=activity, case_insensitive=Tr
 # Initialize database
 firebase_admin.initialize_app(dbCred)
 db = firestore.client()
-print(' > Setup firestore.')
 
 # Load colors
 colors = []
@@ -47,7 +45,6 @@ with open('./res/colors.txt', 'r') as f:
 	for line in f.readlines():
 		colors.append(line.replace('\n', ''))
 		f.close()
-print(' > Loaded colors.')
 
 # Part counters
 # Used to reduce hard-coding random ranges when new parts are added to increase workflow
@@ -60,7 +57,7 @@ _bodies     = countFiles(partDirs + 'bodies/')
 _eyes       = countFiles(partDirs + 'face/eyes/')
 _mouths     = countFiles(partDirs + 'face/mouths/')
 _hats       = countFiles(partDirs + 'hats/')
-print(' > Counted files.')
+print(' > Finished initial setup.')
 
 
 #####################
@@ -364,7 +361,7 @@ async def on_command_error(ctx, error):
 @bot.event
 async def on_ready():
 	random.seed()
-	print('> Botty has been turned on:')
+	print('> Slimes! has been turned on:')
 
 def main(gen, amount=100):
 	if gen:

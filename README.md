@@ -11,24 +11,24 @@
 - General form: ./run <mode> <gen_amount [optional]> <c [optional]>
 - Modes:
 	- bot: Runs in discord bot mode
-	- gen: Creates a given amount of random NFT's. Default of 100. Useful for testing out generation code.
-- gen_amount is any integer. Dictates how many NFT's are created in gen mode.
+	- gen: Creates a given amount of random slimes. Default of 100. Useful for testing out generation code.
+- gen_amount is any integer. Dictates how many slimes are created in gen mode.
 - If 'c' is the last argument, the script will remove the old output image directories and create new empty ones. NOTE: this removes the generated images locally, but they will still persist in the database. This will break the view command described below.
 - Example commands:
 	- ./run gen 1000 c
 	- ./run bot c
 	- ./run 50
-	- ./run c [Just removes old NFT's]
+	- ./run c
 
 **Discord Bot Commands (Prefix: s!)**:
 - help: Lists out basic descriptions for commands.
-- gen: Generates a random "NFT" slime. 30 minute cooldown.
+- gen: Generates a unique random slime. 30 minute cooldown.
 - view <id>: Queries the slimes and replies with an embed containing the matching one if it exists.
 - [WIP] inv: Shows a navigatable embed menu with reaction buttons to scroll through owned slimes.
 
 **TODO**
 - Trading slimes with other people
-- Refactor NFT generation such that they're no longer saved locally, but instead only exist as an ID.
+- Refactor image generation such that they're no longer saved locally, but instead only exist as an ID.
 	- This entails needing to make slimes on-demand when s!view is used.
 	- Saves on server storage space. Probably not as speed efficient.
 

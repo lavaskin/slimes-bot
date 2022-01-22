@@ -2,23 +2,16 @@
 
 clear
 
-make_nft_dirs() {
-	mkdir './nfts'
-	mkdir './nfts/dots'
-	mkdir './nfts/planets'
-	mkdir './nfts/slimes'
-}
-
 # Check if clean is enabled
-# If so, wipe previously generated nft's
+# If so, wipe previously generated slimes (DOESN'T AFFECT DB!)
 if [[ "$BASH_ARGV" = "c" ]]; then
-	rm -fr './nfts'
-	make_nft_dirs
+	rm -fr './slimes'
+	mkdir './slimes'
 fi
 
-# Verify nft folder exists
-if [[ ! -d "./nfts" ]]; then
-	make_nft_dirs
+# Verify slime folder exists
+if [[ ! -d "./slimes" ]]; then
+	mkdir './slimes'
 fi
 
 # Run the bot in a specific mode

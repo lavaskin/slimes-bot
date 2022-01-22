@@ -134,10 +134,10 @@ def getPaintColors():
 ########################
 
 # Given a list of files, creates a layered image of them in order
-# Used to smooth te process of making new NFT collections
+# Used to smooth the process of making new image collections
 def rollLayers(fName, layers, bgColor):
 	# Generate the image
-	nft = Image.new(mode='RGB', size=(width, height), color=colors[bgColor])
+	final = Image.new(mode='RGB', size=(width, height), color=colors[bgColor])
 
 	# Roll Layers
 	for file in layers:
@@ -145,18 +145,18 @@ def rollLayers(fName, layers, bgColor):
 
 		# Check if the layer needs a transparency mask
 		if file[1]:
-			nft.paste(layer, (0, 0), layer)
+			final.paste(layer, (0, 0), layer)
 		else:
-			nft.paste(layer)
+			final.paste(layer)
 		layer.close()
 
 	# Save the image/close
-	nft.save(fName)
-	nft.close()
+	final.save(fName)
+	final.close()
 
 # Places layers of randomly chosen elements to make a slime image
 def genSlime():
-	fName = './nfts/slimes/'
+	fName = './slimes/'
 
 	# Loops until a unique ID is created
 	while True:
@@ -243,7 +243,7 @@ async def gen(ctx):
 	path = genSlime()
 	id    = path[path.rfind('/') + 1:path.rfind('.')]
 
-	# Add nft to the database
+	# Add slime to the database
 	ref = db.collection('users').document(userID)
 	ref.update({'slimes': firestore.ArrayUnion([id])})
 
@@ -260,7 +260,7 @@ async def view(ctx, arg=None):
 		await ctx.reply('I need a valid ID you fucking idiot.')
 		return
 
-	path = './nfts/slimes/{0}.png'.format(arg)
+	path = './slimes/{0}.png'.format(arg)
 	
 	# Check if the slime exists
 	if not exists(path):
@@ -269,7 +269,7 @@ async def view(ctx, arg=None):
 	
 	# Make embed and send it
 	file = discord.File(path)
-	embed = discord.Embed(title='Here\'s slime#' + arg)
+	embed = discord.Embed(title='Here\'s slime#{0}!'.format(arg))
 	embed.set_image(url='attachment://' + path)
 	await ctx.reply(embed=embed, file=file)
 
@@ -372,7 +372,7 @@ def main(gen, amount=100):
 		bot.run(keys['discordToken'])
 
 if __name__ == '__main__':
-	# Check if command-line says to generate specific nft amount
+	# Check if command-line says to generate specific amount of images
 	if len(sys.argv) > 1:
 		if sys.argv[1] == 'gen':
 			if len(sys.argv) > 2:

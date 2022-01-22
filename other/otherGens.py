@@ -1,5 +1,23 @@
 # Contains older NFT generation methods that are now deprecated.
 # This file is just to hold functions, they won't work by themselves
+# The last remnants of the old version of this code back when it was a parody of NFT's
+
+import random
+from PIL import Image
+
+
+#################
+# Globals Setup #
+#################
+
+width, height = 200, 200
+
+# Load colors
+colors = []
+with open('./res/colors.txt', 'r') as f:
+	for line in f.readlines():
+		colors.append(line.replace('\n', ''))
+		f.close()
 
 
 #####################
@@ -50,6 +68,17 @@ def generateNFTNumber(collection):
 		global _planets
 		_planets += 1
 		return _planets
+
+# Generates two different paint colors from the global list (RETURNS THEIR INDEX!)
+def getPaintColors():
+	colorCount = len(colors)
+	c1 = random.randrange(0, colorCount)
+	c2 = random.randrange(0, colorCount)
+
+	# Flip paint color if same as bg
+	if c1 == c2:
+		c1 = colorCount - c1 - 1
+	return c1, c2
 
 
 ########################

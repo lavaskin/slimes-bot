@@ -28,7 +28,6 @@
 
 **TODO**
 - Trading slimes with other people
-- Viewing all your owned slimes in a navigatable embed
 - Refactor NFT generation such that they're no longer saved locally, but instead only exist as an ID.
 	- This entails needing to make slimes on-demand when s!view is used.
 	- Saves on server storage space. Probably not as speed efficient.

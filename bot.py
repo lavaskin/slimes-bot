@@ -1,15 +1,19 @@
+import asyncio
 import json
+import math
 import sys
 import os
 from os.path import exists
 import random
 import discord
 from discord.ext import commands
+from discord_slash import SlashCommand, SlashContext
+from discord_slash.model import ButtonStyle
+from discord_slash.utils.manage_components import ComponentContext, create_actionrow, create_button
 from PIL import Image
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
-import datetime
 
 
 ##########################################
@@ -22,11 +26,11 @@ keys = json.loads(keyFile.read())
 dbCred = credentials.Certificate('./other/firebase.json')
 
 # Global variables
-prefix = 's!'
-activity = discord.Activity(type=discord.ActivityType.listening, name="s!help")
-bot = commands.Bot(command_prefix=prefix, activity=activity)
 width, height = 200, 200
 genCooldown = 1800 # in seconds (30m = 1800s)
+prefix = 's!'
+activity = discord.Activity(type=discord.ActivityType.listening, name="s!help")
+bot = commands.Bot(command_prefix=prefix, activity=activity, case_insensitive=True)
 
 # Initialize database
 firebase_admin.initialize_app(dbCred)
@@ -59,16 +63,23 @@ print(' > Counted files.')
 # Utility Functions #
 #####################
 
+# Turns a list into a string with a given character in between
+def formatList(list, c):
+	res = ''
+	for i in list:
+		res += (i + c)
+	return res[:-1]
+
 # Makes a new document for a user if they aren't registered
-def checkUser(author, userID):
+def checkUser(author, id):
 	# Check if already registered
-	ref = db.collection('users').document(userID)
+	ref = db.collection('users').document(id)
 
 	if not ref.get().exists:
 		# Make document
 		data = {'slimes': []}
 		ref.set(data)
-		print('| Registered: {0} ({1})'.format(author, userID))
+		print('| Registered: {0} ({1})'.format(author, id))
 
 # Encodes a given slime ID into a more readable compact form
 def encodeSlimeID(id):
@@ -238,16 +249,11 @@ async def gen(ctx):
 
 	# Make embed and send it
 	file = discord.File(path)
-	embed = discord.Embed(title='slime#{0} was generated!'.format(id))
+	embed = discord.Embed(title='slime#{0} was generated!'.format(id), color=discord.Color.green())
 	embed.set_image(url='attachment://' + path)
 	await ctx.reply(embed=embed, file=file)
 
-# Replies with an embed showing all of a users *slimes*
-@bot.command(brief='[WIP] Shows the users inventory')
-async def inv(ctx):
-	await ctx.reply('This hasn\'t been implemented yet!')
-
-# Views a *slime* given an ID
+# Views a slime given an ID
 @bot.command(brief='Shows a given slime', description='Shows the slime corresponding to the given ID.')
 async def view(ctx, arg=None):
 	# Check if given id is valid (incredibly insecure)
@@ -267,6 +273,77 @@ async def view(ctx, arg=None):
 	embed = discord.Embed(title='Here\'s slime#' + arg)
 	embed.set_image(url='attachment://' + path)
 	await ctx.reply(embed=embed, file=file)
+
+# Replies with an embed showing all of a users slimes
+@bot.command(brief='Shows the users inventory')
+@commands.cooldown(1, 120, commands.BucketType.user)
+async def inv(ctx):
+	perPage = 10
+	userID = str(ctx.author.id)
+	checkUser(ctx.author, userID)
+	buttons = ['⏮️', '⬅️', '➡️', '⏭️']
+	slimes = db.collection('users').document(userID).get().to_dict()['slimes']
+
+	# Check if user even has slimes
+	if not slimes:
+		await ctx.reply('You have no slimes!')
+		return
+
+	# Only post one page if less than listing amount
+	if len(slimes) < perPage:
+		embed = embed=discord.Embed(title='{0}\'s Inventory'.format(ctx.author), description=formatList(slimes, '\n'), color=discord.Color.green())
+		embed.set_footer(text='{0} slime(s)...'.format(len(slimes)))
+		await ctx.reply(embed=embed)
+
+	# Put into checked pages of embeds
+	pages = []
+	numPages = math.ceil(len(slimes) / perPage)
+	for i in range(numPages):
+		# Slice array for page
+		page = []
+		max = ((i * perPage) + perPage) if (i != numPages - 1) else len(slimes)
+		if i != numPages - 1:
+			page = slimes[i * perPage:(i * perPage) + perPage]
+		else:
+			page = slimes[i * perPage:]
+		# Setup pages embed
+		embed=discord.Embed(title='{0}\'s Inventory'.format(ctx.author), description=formatList(page, '\n'), color=discord.Color.green())
+		embed.set_footer(text='Slimes {0}-{1} of {2} slime(s)...'.format((i * perPage) + 1, max, len(slimes)))
+		pages.append(embed)
+
+	# Setup embed for reactions
+	cur = 0
+	msg = await ctx.reply(embed=pages[cur])
+	for button in buttons:
+		await msg.add_reaction(button)
+
+	while True:
+		try:
+			reaction, _ = await bot.wait_for("reaction_add", check=lambda reaction, user: user == ctx.author and reaction.emoji in buttons, timeout=60.0)
+		except asyncio.TimeoutError:
+			return
+		else:
+			# Pick next page based on reaction
+			prev = cur
+			if reaction.emoji == buttons[0]:
+				cur = 0
+			if reaction.emoji == buttons[1]:
+				if cur > 0:
+					cur -= 1
+			if reaction.emoji == buttons[2]:
+				if cur < len(pages) - 1:
+					cur += 1
+			if reaction.emoji == buttons[3]:
+				cur = len(pages) - 1
+			for button in buttons:
+				await msg.remove_reaction(button, ctx.author)
+			if cur != prev:
+				await msg.edit(embed=pages[cur])
+
+# Given a slime the user owns and someone elses, requests a trade
+@bot.command(brief='[WIP] Trade with other users', description='Usage: {0}trade <your slime> <their slime>. '.format(prefix))
+async def trade(ctx, slime1, slime2):
+	await ctx.reply('This hasn\'t been implemented yet!')
 
 
 #############

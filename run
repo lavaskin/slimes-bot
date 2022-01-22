@@ -1,5 +1,7 @@
 #!/bin/bash
 
+clear
+
 make_nft_dirs() {
 	mkdir './nfts'
 	mkdir './nfts/dots'

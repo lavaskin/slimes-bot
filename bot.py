@@ -22,8 +22,8 @@ keys = json.loads(keyFile.read())
 dbCred = credentials.Certificate('./other/firebase.json')
 
 # Global variables
-prefix = 'b!'
-activity = discord.Activity(type=discord.ActivityType.listening, name="b!help")
+prefix = 's!'
+activity = discord.Activity(type=discord.ActivityType.listening, name="s!help")
 bot = commands.Bot(command_prefix=prefix, activity=activity)
 width, height = 200, 200
 genCooldown = 1800 # in seconds (30m = 1800s)
@@ -46,11 +46,12 @@ print(' > Loaded colors.')
 def countFiles(dir):
 	# Counts the amount of files in a directory
 	return len([f for f in os.listdir(dir) if os.path.isfile(dir + f)])
-_specialBgs = countFiles('./res/parts/slimes/backgrounds/special/')
-_bodies     = countFiles('./res/parts/slimes/bodies/')
-_eyes       = countFiles('./res/parts/slimes/face/eyes/')
-_mouths     = countFiles('./res/parts/slimes/face/mouths/')
-_hats       = countFiles('./res/parts/slimes/hats/')
+partDirs = './res/parts/slimes/'
+_specialBgs = countFiles(partDirs + 'backgrounds/special/')
+_bodies     = countFiles(partDirs + 'bodies/')
+_eyes       = countFiles(partDirs + 'face/eyes/')
+_mouths     = countFiles(partDirs + 'face/mouths/')
+_hats       = countFiles(partDirs + 'hats/')
 print(' > Counted files.')
 
 
@@ -144,7 +145,6 @@ def rollLayers(fName, layers, bgColor):
 # Places layers of randomly chosen elements to make a slime image
 def genSlime():
 	fName = './nfts/slimes/'
-	partDir = './res/parts/slimes/'
 
 	# Loops until a unique ID is created
 	while True:
@@ -166,11 +166,11 @@ def genSlime():
 			# Apply special background
 			roll = str(random.randrange(0, _specialBgs))
 			id += ('2-' + roll + '-X-')
-			layers.append(('{0}backgrounds/special/{1}.png'.format(partDir, roll), False))
+			layers.append(('{0}backgrounds/special/{1}.png'.format(partDirs, roll), False))
 		elif bgRoll > 50:
 			# Apply stripe layer
 			id += ('1-{0}-{1}-'.format(bgColor, altColor))
-			layers.append(('{0}backgrounds/stripes/{1}.png'.format(partDir, altColor), True))
+			layers.append(('{0}backgrounds/stripes/{1}.png'.format(partDirs, altColor), True))
 		else:
 			# Solid Color
 			id += ('0-' + str(bgColor) + '-X-')
@@ -182,25 +182,25 @@ def genSlime():
 		else:
 			roll = str(random.randrange(numNormals, _bodies))
 		id += (roll + '-')
-		layers.append(('{0}bodies/{1}.png'.format(partDir, roll), True))
+		layers.append(('{0}bodies/{1}.png'.format(partDirs, roll), True))
 
 		# Eyes
 		roll = str(random.randrange(0, _eyes))
 		id += (roll + '-')
-		layers.append(('{0}face/eyes/{1}.png'.format(partDir, roll), True))
+		layers.append(('{0}face/eyes/{1}.png'.format(partDirs, roll), True))
 
 		# Mouth [75% chance]
 		if random.randint(0, 3) != 0:
 			roll = str(random.randrange(0, _mouths))
 			id += (roll + '-')
-			layers.append(('{0}face/mouths/{1}.png'.format(partDir, roll), True))
+			layers.append(('{0}face/mouths/{1}.png'.format(partDirs, roll), True))
 		else: id += 'X-'
 
 		# Add hat [50% chance of having a hat]
 		if random.randint(0, 1):
 			roll = str(random.randrange(0, _hats))
 			id += roll
-			layers.append(('{0}hats/{1}.png'.format(partDir, roll), True))
+			layers.append(('{0}hats/{1}.png'.format(partDirs, roll), True))
 		else: id += 'X'
 
 		# Encode ID
@@ -264,7 +264,7 @@ async def view(ctx, arg=None):
 	
 	# Make embed and send it
 	file = discord.File(path)
-	embed = discord.Embed(title='Here\'s slimes#' + arg)
+	embed = discord.Embed(title='Here\'s slime#' + arg)
 	embed.set_image(url='attachment://' + path)
 	await ctx.reply(embed=embed, file=file)
 
@@ -278,9 +278,9 @@ async def on_command_error(ctx, error):
 	if isinstance(error, commands.CommandOnCooldown):
 		# Check if more than 2 minutes remaining
 		if error.retry_after < 121:
-			await ctx.reply('You can use this command again in {0}s.'.format(int(error.retry_after)))
+			await ctx.reply('You can use this command again in *{0} seconds*.'.format(int(error.retry_after)))
 		else:
-			await ctx.reply('You can use this command again in *{0}minutes*.'.format(int(error.retry_after / 60)))
+			await ctx.reply('You can use this command again in *{0} minutes*.'.format(int(error.retry_after / 60)))
 	elif isinstance(error, commands.CommandNotFound):
 		await ctx.reply('That command doesn\'t exist!')
 

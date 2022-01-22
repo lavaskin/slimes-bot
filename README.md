@@ -20,18 +20,17 @@
 	- ./run 50
 	- ./run c [Just removes old NFT's]
 
-**Discord Bot Commands (Prefix: b!)**:
+**Discord Bot Commands (Prefix: s!)**:
 - help: Lists out basic descriptions for commands.
 - gen: Generates a random "NFT" slime. 30 minute cooldown.
 - view <id>: Queries the slimes and replies with an embed containing the matching one if it exists.
 - [WIP] inv: Shows a navigatable embed menu with reaction buttons to scroll through owned slimes.
 
 **TODO**
-- Database integration for "owning" an NFT
-	- Trading with others
-	- Viewing your owned NFT's
+- Trading slimes with other people
+- Viewing all your owned slimes in a navigatable embed
 - Refactor NFT generation such that they're no longer saved locally, but instead only exist as an ID.
-	- This entails needing to make slimes on-demand when b!view is used.
+	- This entails needing to make slimes on-demand when s!view is used.
 	- Saves on server storage space. Probably not as speed efficient.
 
 **Credits**

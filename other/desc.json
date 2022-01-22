@@ -1,0 +1,18 @@
+{
+	"gen": {
+		"short": "Generates a new slime",
+		"long": "Creates a unique slime and replies to the user with it. This slime is now owned by the command user!\nCooldown: 30 minutes"
+	},
+	"view": {
+		"short": "Shows a given slime",
+		"long": "Usage: s!view <slime id>\nShows the slime corresponding to the given ID."
+	},
+	"inv": {
+		"short": "Shows the users inventory",
+		"long": "Shows a navigatable embed of every slime the user owns ordered by date acquired.\nCooldown: 2 minutes"
+	},
+	"trade": {
+		"short": "[WIP] Trade with other users",
+		"long": "Usage: s!trade <your slime> <their slime>.\nOffers a trade for their slime given yours. If the receiver reacts with a checkmark the trade completes."
+	}
+}

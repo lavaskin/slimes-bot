@@ -7,23 +7,27 @@ from os.path import exists
 import random
 import discord
 from discord.ext import commands
-from discord_slash import SlashCommand, SlashContext
-from discord_slash.model import ButtonStyle
-from discord_slash.utils.manage_components import ComponentContext, create_actionrow, create_button
 from PIL import Image
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
+# TODO: Replace my shitty reaction navigation with this goated library
+from discord_slash import SlashCommand, SlashContext
+from discord_slash.model import ButtonStyle
+from discord_slash.utils.manage_components import ComponentContext, create_actionrow, create_button
 
 
 ##########################################
 # Globals Setup (I know globals are bad) #
 ##########################################
 
-# Load keys
+# Load in JSON Files
 keyFile = open('./other/auth.json', 'r')
 keys = json.loads(keyFile.read())
 dbCred = credentials.Certificate('./other/firebase.json')
+descFile = open('./other/desc.json')
+desc = json.loads(descFile.read())
+print(desc['inv']['short'])
 
 # Global variables
 width, height = 200, 200
@@ -232,8 +236,7 @@ def genSlime():
 # Bot Commands #
 ################
 
-# Generates an nft and posts it as a reply
-@bot.command(brief='Generates an NFT', description='Creates a unique "NFT" and replies to the user with it. 30m cooldown.')
+@bot.command(brief=desc['gen']['short'], description=desc['gen']['long'])
 @commands.cooldown(1, genCooldown, commands.BucketType.user)
 async def gen(ctx):
 	userID = str(ctx.author.id)
@@ -253,8 +256,7 @@ async def gen(ctx):
 	embed.set_image(url='attachment://' + path)
 	await ctx.reply(embed=embed, file=file)
 
-# Views a slime given an ID
-@bot.command(brief='Shows a given slime', description='Shows the slime corresponding to the given ID.')
+@bot.command(brief=desc['view']['short'], description=desc['view']['long'])
 async def view(ctx, arg=None):
 	# Check if given id is valid (incredibly insecure)
 	if not arg or len(arg) != 7:
@@ -274,8 +276,7 @@ async def view(ctx, arg=None):
 	embed.set_image(url='attachment://' + path)
 	await ctx.reply(embed=embed, file=file)
 
-# Replies with an embed showing all of a users slimes
-@bot.command(brief='Shows the users inventory')
+@bot.command(brief=desc['inv']['short'], description=desc['inv']['long'])
 @commands.cooldown(1, 120, commands.BucketType.user)
 async def inv(ctx):
 	perPage = 10
@@ -340,8 +341,7 @@ async def inv(ctx):
 			if cur != prev:
 				await msg.edit(embed=pages[cur])
 
-# Given a slime the user owns and someone elses, requests a trade
-@bot.command(brief='[WIP] Trade with other users', description='Usage: {0}trade <your slime> <their slime>. '.format(prefix))
+@bot.command(brief=desc['trade']['short'], description=desc['trade']['long'])
 async def trade(ctx, slime1, slime2):
 	await ctx.reply('This hasn\'t been implemented yet!')
 

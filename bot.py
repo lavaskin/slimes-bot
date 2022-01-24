@@ -346,12 +346,13 @@ async def inv(ctx):
 				await msg.edit(embed=pages[cur])
 
 @bot.command(brief=desc['trade']['short'], description=desc['trade']['long'])
+@commands.cooldown(1, 60, commands.BucketType.user)
 async def trade(ctx, other, slime1, slime2):
 	# Check if both users are registerd
 	userID = str(ctx.author.id)
 	otherID = other[3:-1]
 	if userID == otherID:
-		await ctx.reply('You can\t trade with yourself, dumbass,', delete_after=5)
+		await ctx.reply('You can\t trade with yourself, dumbass.', delete_after=5)
 		return
 	elif not checkUser(userID, ctx.author) or not checkUser(otherID):
 		await ctx.reply('You both need to be registered to trade!', delete_after=5)
@@ -380,23 +381,62 @@ async def trade(ctx, other, slime1, slime2):
 
 	# Process message reaction
 	try:
-		reaction, _ = await bot.wait_for("reaction_add", check=lambda reaction, user: user.id == int(otherID) and reaction.emoji in buttons, timeout=10.0)
+		reaction, user = await bot.wait_for("reaction_add", check=lambda reaction, user: user.id == int(otherID) and reaction.emoji in buttons, timeout=10.0)
 	except asyncio.TimeoutError:
 		return
 	else:
 		if reaction.emoji == buttons[0]:
 			await ctx.send('The trade has been accepted!')
 
-			# Execute trade
 			# Add other persons slimes
 			ref.update({'slimes': firestore.ArrayUnion([slime2])})
 			otherRef.update({'slimes': firestore.ArrayUnion([slime1])})
-
 			# Remove old slimes
 			ref.update({'slimes': firestore.ArrayRemove([slime1])})
 			otherRef.update({'slimes': firestore.ArrayRemove([slime2])})
+			# Update trade message
+			await msg.edit(content=f'The trade has been accepted!\n**{slime1}** :arrow_right: **{user}**\n**{slime2}** :arrow_right: **{ctx.author}**')
 		elif reaction.emoji == buttons[1]:
 			await ctx.send('The trade has been declined!')
+
+@bot.command(brief=desc['reset_self']['short'], description=desc['reset_self']['long'])
+@commands.cooldown(1, 86400, commands.BucketType.user)
+async def reset_self(ctx):
+	userID = str(ctx.author.id)
+	if not checkUser(userID):
+		await ctx.reply('You have nothing to reset!', delete_after=5)
+		return
+
+	# Make confirmation method
+	buttons = ['✔️', '❌']
+	msg = await ctx.reply('Are you completely sure you want to reset your account? There are no reversals.')
+	for button in buttons:
+		await msg.add_reaction(button)
+
+	# Process response
+	try:
+		reaction, _ = await bot.wait_for("reaction_add", check=lambda reaction, user: user == ctx.author and reaction.emoji in buttons, timeout=10.0)
+	except asyncio.TimeoutError:
+		return
+	else:
+		if reaction.emoji == buttons[0]:
+			dir = './slimes/'
+			ref = db.collection('users').document(userID)
+
+			# Reset slimes stored on server
+			slimes = ref.get().to_dict()['slimes']
+			if slimes:
+				allSlimes = os.listdir(dir)
+				for slime in slimes:
+					for f in allSlimes:
+						if os.path.isfile(dir + f) and f[:f.rfind('.')] == slime:
+							os.remove(dir + f)
+
+			# Remove user document in database and respond
+			ref.delete()
+			await msg.edit(content='Your account has been reset.')
+		elif reaction.emoji == buttons[1]:
+			await msg.edit(content='Your account is safe!')
 
 
 #############

@@ -26,6 +26,7 @@
 - view <slime id>: Queries the slimes and replies with an embed containing the matching one if it exists.
 - inv: Shows a navigatable embed menu with reaction buttons to scroll through owned slimes.
 - trade <other user> <your slime> <their slime>: Offers a trade to a given user.
+- reset_self: Completely resets your account. Mostly for testing, but maybe users want this ability?
 
 **TODO**
 - Replace trade offer message with embed containing image of both slimes.

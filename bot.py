@@ -30,7 +30,7 @@ desc = json.loads(descFile.read())
 
 # Global variables
 width, height = 200, 200
-genCooldown = 1800 # in seconds (30m = 1800s)
+genCooldown = 900 # in seconds (30m = 1800s)
 prefix = 's!'
 activity = discord.Activity(type=discord.ActivityType.listening, name="s!help")
 bot = commands.Bot(command_prefix=prefix, activity=activity, case_insensitive=True)
@@ -72,15 +72,20 @@ def formatList(list, c):
 	return res[:-1]
 
 # Makes a new document for a user if they aren't registered
-def checkUser(author, id):
+def checkUser(id, author=''):
 	# Check if already registered
 	ref = db.collection('users').document(id)
 
 	if not ref.get().exists:
+		# Only register a user if they generate a slime
+		if not author: return False
 		# Make document
-		data = {'slimes': []}
+		data = {'tag': str(author), 'slimes': []}
 		ref.set(data)
 		print('| Registered: {0} ({1})'.format(author, id))
+		return False
+	else:
+		return True
 
 # Encodes a given slime ID into a more readable compact form
 def encodeSlimeID(id):
@@ -237,7 +242,7 @@ def genSlime():
 @commands.cooldown(1, genCooldown, commands.BucketType.user)
 async def gen(ctx):
 	userID = str(ctx.author.id)
-	checkUser(ctx.author, userID)
+	checkUser(userID, ctx.author)
 
 	# Generate slime and get id
 	path = genSlime()
@@ -257,7 +262,7 @@ async def gen(ctx):
 async def view(ctx, arg=None):
 	# Check if given id is valid (incredibly insecure)
 	if not arg or len(arg) != 7:
-		await ctx.reply('I need a valid ID you fucking idiot.')
+		await ctx.reply('I need a valid ID you fucking idiot.', delete_after=5)
 		return
 
 	path = './slimes/{0}.png'.format(arg)
@@ -277,8 +282,9 @@ async def view(ctx, arg=None):
 @commands.cooldown(1, 120, commands.BucketType.user)
 async def inv(ctx):
 	perPage = 10
+	username = str(ctx.author)[:str(ctx.author).rfind('#')]
 	userID = str(ctx.author.id)
-	checkUser(ctx.author, userID)
+	checkUser(userID, ctx.author)
 	buttons = ['⏮️', '⬅️', '➡️', '⏭️']
 	slimes = db.collection('users').document(userID).get().to_dict()['slimes']
 
@@ -289,11 +295,12 @@ async def inv(ctx):
 
 	# Only post one page if less than listing amount
 	if len(slimes) < perPage:
-		embed = embed=discord.Embed(title='{0}\'s Inventory'.format(ctx.author), description=formatList(slimes, '\n'), color=discord.Color.green())
+		embed = embed=discord.Embed(title='{0}\'s Inventory'.format(username), description=formatList(slimes, '\n'), color=discord.Color.green())
 		embed.set_footer(text='{0} slime(s)...'.format(len(slimes)))
 		await ctx.reply(embed=embed)
+		return
 
-	# Put into checked pages of embeds
+	# Put into pages of embeds
 	pages = []
 	numPages = math.ceil(len(slimes) / perPage)
 	for i in range(numPages):
@@ -305,8 +312,8 @@ async def inv(ctx):
 		else:
 			page = slimes[i * perPage:]
 		# Setup pages embed
-		embed=discord.Embed(title='{0}\'s Inventory'.format(ctx.author), description=formatList(page, '\n'), color=discord.Color.green())
-		embed.set_footer(text='Slimes {0}-{1} of {2} slime(s)...'.format((i * perPage) + 1, max, len(slimes)))
+		embed=discord.Embed(title='{0}\'s Inventory'.format(username), description=formatList(page, '\n'), color=discord.Color.green())
+		embed.set_footer(text='Slimes {0}-{1} of {2}...'.format((i * perPage) + 1, max, len(slimes)))
 		pages.append(embed)
 
 	# Setup embed for reactions
@@ -317,7 +324,7 @@ async def inv(ctx):
 
 	while True:
 		try:
-			reaction, _ = await bot.wait_for("reaction_add", check=lambda reaction, user: user == ctx.author and reaction.emoji in buttons, timeout=60.0)
+			reaction, _ = await bot.wait_for("reaction_add", check=lambda reaction, user: user == ctx.author and reaction.emoji in buttons, timeout=10.0)
 		except asyncio.TimeoutError:
 			return
 		else:
@@ -339,8 +346,57 @@ async def inv(ctx):
 				await msg.edit(embed=pages[cur])
 
 @bot.command(brief=desc['trade']['short'], description=desc['trade']['long'])
-async def trade(ctx, slime1, slime2):
-	await ctx.reply('This hasn\'t been implemented yet!')
+async def trade(ctx, other, slime1, slime2):
+	# Check if both users are registerd
+	userID = str(ctx.author.id)
+	otherID = other[3:-1]
+	if userID == otherID:
+		await ctx.reply('You can\t trade with yourself, dumbass,', delete_after=5)
+		return
+	elif not checkUser(userID, ctx.author) or not checkUser(otherID):
+		await ctx.reply('You both need to be registered to trade!', delete_after=5)
+		return
+
+	# Basic check on given id's
+	if len(slime1) != 7 or len(slime2) != 7:
+		await ctx.reply('Given ID\'s need to be valid!', delete_after=5)
+		return
+
+	# Check if both users have slimes, including the ones referenced in args
+	ref = db.collection('users').document(userID)
+	otherRef = db.collection('users').document(otherID)
+	slimes = ref.get().to_dict()['slimes']
+	otherSlimes = otherRef.get().to_dict()['slimes']
+	if slime1 not in slimes:
+		await ctx.reply(f'You don\'t own {slime1}!', delete_after=5)
+	elif slime2 not in otherSlimes:
+		await ctx.reply(f'They doesn\t own {slime2}!', delete_after=5)
+
+	# Post trade request
+	buttons = ['✔️', '❌']
+	msg = await ctx.send(f'{other}, <@{userID}> wants to trade their **{slime1}** for your **{slime2}**. Do you accept?')
+	for button in buttons:
+		await msg.add_reaction(button)
+
+	# Process message reaction
+	try:
+		reaction, _ = await bot.wait_for("reaction_add", check=lambda reaction, user: user.id == int(otherID) and reaction.emoji in buttons, timeout=10.0)
+	except asyncio.TimeoutError:
+		return
+	else:
+		if reaction.emoji == buttons[0]:
+			await ctx.send('The trade has been accepted!')
+
+			# Execute trade
+			# Add other persons slimes
+			ref.update({'slimes': firestore.ArrayUnion([slime2])})
+			otherRef.update({'slimes': firestore.ArrayUnion([slime1])})
+
+			# Remove old slimes
+			ref.update({'slimes': firestore.ArrayRemove([slime1])})
+			otherRef.update({'slimes': firestore.ArrayRemove([slime2])})
+		elif reaction.emoji == buttons[1]:
+			await ctx.send('The trade has been declined!')
 
 
 #############
@@ -352,9 +408,9 @@ async def on_command_error(ctx, error):
 	if isinstance(error, commands.CommandOnCooldown):
 		# Check if more than 2 minutes remaining
 		if error.retry_after < 121:
-			await ctx.reply('You can use this command again in *{0} seconds*.'.format(int(error.retry_after)))
+			await ctx.reply('You can use this command again in *{0} seconds*.'.format(int(error.retry_after)), delete_after=5)
 		else:
-			await ctx.reply('You can use this command again in *{0} minutes*.'.format(int(error.retry_after / 60)))
+			await ctx.reply('You can use this command again in *{0} minutes*.'.format(int(error.retry_after / 60)), delete_after=5)
 	elif isinstance(error, commands.CommandNotFound):
 		await ctx.reply('That command doesn\'t exist!')
 

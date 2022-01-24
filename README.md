@@ -23,11 +23,12 @@
 **Discord Bot Commands (Prefix: s!)**:
 - help: Lists out basic descriptions for commands.
 - gen: Generates a unique random slime. 30 minute cooldown.
-- view <id>: Queries the slimes and replies with an embed containing the matching one if it exists.
-- [WIP] inv: Shows a navigatable embed menu with reaction buttons to scroll through owned slimes.
+- view <slime id>: Queries the slimes and replies with an embed containing the matching one if it exists.
+- inv: Shows a navigatable embed menu with reaction buttons to scroll through owned slimes.
+- trade <other user> <your slime> <their slime>: Offers a trade to a given user.
 
 **TODO**
-- Trading slimes with other people
+- Replace trade offer message with embed containing image of both slimes.
 - Refactor image generation such that they're no longer saved locally, but instead only exist as an ID.
 	- This entails needing to make slimes on-demand when s!view is used.
 	- Saves on server storage space. Probably not as speed efficient.

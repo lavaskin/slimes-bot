@@ -13,6 +13,6 @@
 	},
 	"trade": {
 		"short": "[WIP] Trade with other users",
-		"long": "Usage: s!trade <your slime> <their slime>.\nOffers a trade for their slime given yours. If the receiver reacts with a checkmark the trade completes."
+		"long": "Usage: s!trade <other user> <your slime> <their slime>.\nOffers a trade for their slime given yours. If the receiver reacts with a checkmark the trade completes."
 	}
 }

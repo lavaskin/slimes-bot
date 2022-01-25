@@ -63,6 +63,14 @@ print(' > Finished initial setup.')
 # Utility Functions #
 #####################
 
+# Checks if a given slime passes the given filter
+def passesFilter(filter, slime):
+	# Check if every character passes the filter
+	for i, c in enumerate(slime):
+		if filter[i] != '.' and filter[i] != c:
+			return False
+	return True
+
 # Turns a list into a string with a given character in between
 def formatList(list, c):
 	res = ''
@@ -277,7 +285,7 @@ async def view(ctx, arg=None):
 
 @bot.command(brief=desc['inv']['short'], description=desc['inv']['long'])
 @commands.cooldown(1, 120, commands.BucketType.user)
-async def inv(ctx, arg=''):
+async def inv(ctx, filter=''):
 	perPage = 10
 	username = str(ctx.author)[:str(ctx.author).rfind('#')]
 	userID = str(ctx.author.id)
@@ -287,33 +295,44 @@ async def inv(ctx, arg=''):
 
 	# Check if user even has slimes
 	if not slimes:
-		await ctx.reply('You have no slimes!')
+		await ctx.reply('You have no slimes!', delete_after=5)
+		return
+
+	# Filter slimes
+	filtered = []
+	if len(filter) == 7:
+		for slime in slimes:
+			if passesFilter(filter, slime):
+				filtered.append(slime)
+	else:
+		filtered = slimes
+
+	# Check if there are any slimes that match the filter
+	if not filtered:
+		await ctx.reply('No slimes you own match that filter!', delete_after=5)
 		return
 
 	# Only post one page if less than listing amount
 	if len(slimes) < perPage:
 		embed = embed=discord.Embed(title='{0}\'s Inventory'.format(username), description=formatList(slimes, '\n'), color=discord.Color.green())
-		embed.set_footer(text='{0} slime(s)...'.format(len(slimes)))
+		embed.set_footer(text='{0} slime(s)...'.format(len(filtered)))
 		await ctx.reply(embed=embed)
 		return
 
-	# Filter slimes
-	# TODO
-
 	# Put into pages of embeds
 	pages = []
-	numPages = math.ceil(len(slimes) / perPage)
+	numPages = math.ceil(len(filtered) / perPage)
 	for i in range(numPages):
 		# Slice array for page
 		page = []
-		max = ((i * perPage) + perPage) if (i != numPages - 1) else len(slimes)
+		max = ((i * perPage) + perPage) if (i != numPages - 1) else len(filtered)
 		if i != numPages - 1:
-			page = slimes[i * perPage:(i * perPage) + perPage]
+			page = filtered[i * perPage:(i * perPage) + perPage]
 		else:
-			page = slimes[i * perPage:]
+			page = filtered[i * perPage:]
 		# Setup pages embed
 		embed=discord.Embed(title='{0}\'s Inventory'.format(username), description=formatList(page, '\n'), color=discord.Color.green())
-		embed.set_footer(text='Slimes {0}-{1} of {2}...'.format((i * perPage) + 1, max, len(slimes)))
+		embed.set_footer(text='Slimes {0}-{1} of {2}...'.format((i * perPage) + 1, max, len(filtered)))
 		pages.append(embed)
 
 	# Setup embed for reactions

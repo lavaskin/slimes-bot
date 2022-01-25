@@ -29,7 +29,7 @@ desc = json.loads(descFile.read())
 
 # Global variables
 width, height = 200, 200
-genCooldown = 1 # in seconds (30m = 1800s)
+genCooldown = 900 # in seconds (30m = 1800s)
 prefix = 's!'
 activity = discord.Activity(type=discord.ActivityType.listening, name="s!help")
 bot = commands.Bot(command_prefix=prefix, activity=activity, case_insensitive=True)

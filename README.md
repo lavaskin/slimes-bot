@@ -29,7 +29,7 @@
 - reset_self: Completely resets your account. Mostly for testing, but maybe users want this ability?
 
 **TODO**
-- Replace trade offer message with embed containing image of both slimes.
+- Add optional filter argument to inv command allowing users to filter their collection
 - Refactor image generation such that they're no longer saved locally, but instead only exist as an ID.
 	- This entails needing to make slimes on-demand when s!view is used.
 	- Saves on server storage space. Probably not as speed efficient.

@@ -1,4 +1,5 @@
 import asyncio
+from configparser import ConverterMapping
 import json
 import math
 import sys
@@ -8,13 +9,11 @@ import random
 import discord
 from discord.ext import commands
 from PIL import Image
+from PIL import ImageFont
+from PIL import ImageDraw
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
-# TODO: Replace my shitty reaction navigation with this goated library
-from discord_slash import SlashCommand, SlashContext
-from discord_slash.model import ButtonStyle
-from discord_slash.utils.manage_components import ComponentContext, create_actionrow, create_button
 
 
 ##########################################
@@ -255,7 +254,6 @@ async def gen(ctx):
 	# Make embed and send it
 	file = discord.File(path)
 	embed = discord.Embed(title='slime#{0} was generated!'.format(id), color=discord.Color.green())
-	embed.set_image(url='attachment://' + path)
 	await ctx.reply(embed=embed, file=file)
 
 @bot.command(brief=desc['view']['short'], description=desc['view']['long'])
@@ -275,7 +273,6 @@ async def view(ctx, arg=None):
 	# Make embed and send it
 	file = discord.File(path)
 	embed = discord.Embed(title='Here\'s slime#{0}!'.format(arg))
-	embed.set_image(url='attachment://' + path)
 	await ctx.reply(embed=embed, file=file)
 
 @bot.command(brief=desc['inv']['short'], description=desc['inv']['long'])
@@ -373,15 +370,35 @@ async def trade(ctx, other, slime1, slime2):
 	elif slime2 not in otherSlimes:
 		await ctx.reply(f'They doesn\t own {slime2}!', delete_after=5)
 
+	# Make combined image
+	s1img = Image.open(f'./slimes/{slime1}.png')
+	s2img = Image.open(f'./slimes/{slime2}.png')
+	exchangeImg = Image.open('./res/arrows.png')
+	combined = Image.new(mode='RGBA', size=(550, 200), color=(0, 0, 0, 0))
+	combined.paste(s1img, (0, 0))
+	combined.paste(exchangeImg, (200, 0))
+	combined.paste(s2img, (350, 0))
+	fName = f'./slimes/trade_{slime1}_{slime2}.png'
+	# Place text
+	font = ImageFont.truetype("consola.ttf", 20)
+	draw = ImageDraw.Draw(combined)
+	draw.text((110, 0), f"#{slime1}", (0, 0, 0), font=font)
+	draw.text((460, 0), f"#{slime2}", (0, 0, 0), font=font)
+	# Save image
+	combined.save(fName)
+	combined.close()
+	file = discord.File(fName)
+
 	# Post trade request
 	buttons = ['✔️', '❌']
-	msg = await ctx.send(f'{other}, <@{userID}> wants to trade their **{slime1}** for your **{slime2}**. Do you accept?')
+	msg = await ctx.send(f'{other}: <@{userID}> wants to trade their **{slime1}** for your **{slime2}**. Do you accept?', file=file)
+	os.remove(fName)
 	for button in buttons:
 		await msg.add_reaction(button)
 
 	# Process message reaction
 	try:
-		reaction, user = await bot.wait_for("reaction_add", check=lambda reaction, user: user.id == int(otherID) and reaction.emoji in buttons, timeout=10.0)
+		reaction, user = await bot.wait_for("reaction_add", check=lambda reaction, user: user.id == int(otherID) and reaction.emoji in buttons, timeout=30.0)
 	except asyncio.TimeoutError:
 		return
 	else:
@@ -443,16 +460,16 @@ async def reset_self(ctx):
 # Bot Setup #
 #############
 
-@bot.event
-async def on_command_error(ctx, error):
-	if isinstance(error, commands.CommandOnCooldown):
-		# Check if more than 2 minutes remaining
-		if error.retry_after < 121:
-			await ctx.reply('You can use this command again in *{0} seconds*.'.format(int(error.retry_after)), delete_after=5)
-		else:
-			await ctx.reply('You can use this command again in *{0} minutes*.'.format(int(error.retry_after / 60)), delete_after=5)
-	elif isinstance(error, commands.CommandNotFound):
-		await ctx.reply('That command doesn\'t exist!')
+# @bot.event
+# async def on_command_error(ctx, error):
+# 	if isinstance(error, commands.CommandOnCooldown):
+# 		# Check if more than 2 minutes remaining
+# 		if error.retry_after < 121:
+# 			await ctx.reply('You can use this command again in *{0} seconds*.'.format(int(error.retry_after)), delete_after=5)
+# 		else:
+# 			await ctx.reply('You can use this command again in *{0} minutes*.'.format(int(error.retry_after / 60)), delete_after=5)
+# 	elif isinstance(error, commands.CommandNotFound):
+# 		await ctx.reply('That command doesn\'t exist!')
 
 @bot.event
 async def on_ready():

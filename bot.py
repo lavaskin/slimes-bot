@@ -406,8 +406,8 @@ async def trade(ctx, other, slime1, slime2):
 	# Place text
 	font = ImageFont.truetype("consola.ttf", 20)
 	draw = ImageDraw.Draw(combined)
-	draw.text((110, 0), f"#{slime1}", (0, 0, 0), font=font)
-	draw.text((460, 0), f"#{slime2}", (0, 0, 0), font=font)
+	draw.text((100, 0), f"#{slime1}", (0, 0, 0), font=font)
+	draw.text((450, 0), f"#{slime2}", (0, 0, 0), font=font)
 	# Save image
 	combined.save(fName)
 	combined.close()

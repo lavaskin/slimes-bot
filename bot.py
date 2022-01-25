@@ -29,7 +29,7 @@ desc = json.loads(descFile.read())
 
 # Global variables
 width, height = 200, 200
-genCooldown = 900 # in seconds (30m = 1800s)
+genCooldown = 1 # in seconds (30m = 1800s)
 prefix = 's!'
 activity = discord.Activity(type=discord.ActivityType.listening, name="s!help")
 bot = commands.Bot(command_prefix=prefix, activity=activity, case_insensitive=True)
@@ -160,7 +160,7 @@ def rollLayers(fName, layers, bgColor):
 
 # Places layers of randomly chosen elements to make a slime image
 def genSlime():
-	fName = './slimes/'
+	fName = './output/'
 
 	# Loops until a unique ID is created
 	while True:
@@ -263,7 +263,7 @@ async def view(ctx, arg=None):
 		await ctx.reply('I need a valid ID you fucking idiot.', delete_after=5)
 		return
 
-	path = './slimes/{0}.png'.format(arg)
+	path = './output/{0}.png'.format(arg)
 	
 	# Check if the slime exists
 	if not exists(path):
@@ -272,12 +272,12 @@ async def view(ctx, arg=None):
 	
 	# Make embed and send it
 	file = discord.File(path)
-	embed = discord.Embed(title='Here\'s slime#{0}!'.format(arg))
+	embed = discord.Embed(title='Here\'s slime#{0}!'.format(arg), color=discord.Color.green())
 	await ctx.reply(embed=embed, file=file)
 
 @bot.command(brief=desc['inv']['short'], description=desc['inv']['long'])
 @commands.cooldown(1, 120, commands.BucketType.user)
-async def inv(ctx):
+async def inv(ctx, arg=''):
 	perPage = 10
 	username = str(ctx.author)[:str(ctx.author).rfind('#')]
 	userID = str(ctx.author.id)
@@ -296,6 +296,9 @@ async def inv(ctx):
 		embed.set_footer(text='{0} slime(s)...'.format(len(slimes)))
 		await ctx.reply(embed=embed)
 		return
+
+	# Filter slimes
+	# TODO
 
 	# Put into pages of embeds
 	pages = []
@@ -371,14 +374,14 @@ async def trade(ctx, other, slime1, slime2):
 		await ctx.reply(f'They doesn\t own {slime2}!', delete_after=5)
 
 	# Make combined image
-	s1img = Image.open(f'./slimes/{slime1}.png')
-	s2img = Image.open(f'./slimes/{slime2}.png')
+	s1img = Image.open(f'./output/{slime1}.png')
+	s2img = Image.open(f'./output/{slime2}.png')
 	exchangeImg = Image.open('./res/arrows.png')
 	combined = Image.new(mode='RGBA', size=(550, 200), color=(0, 0, 0, 0))
 	combined.paste(s1img, (0, 0))
 	combined.paste(exchangeImg, (200, 0))
 	combined.paste(s2img, (350, 0))
-	fName = f'./slimes/trade_{slime1}_{slime2}.png'
+	fName = f'./output/trade_{slime1}_{slime2}.png'
 	# Place text
 	font = ImageFont.truetype("consola.ttf", 20)
 	draw = ImageDraw.Draw(combined)
@@ -437,7 +440,7 @@ async def reset_self(ctx):
 		return
 	else:
 		if reaction.emoji == buttons[0]:
-			dir = './slimes/'
+			dir = './output/'
 			ref = db.collection('users').document(userID)
 
 			# Reset slimes stored on server

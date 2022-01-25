@@ -87,7 +87,7 @@ def getPaintColors():
 
 # Makes random amounts of planets in various sizes
 def genPlanets():
-	fName = './nfts/planets/planets_{0}.png'.format(generateNFTNumber('planets'))
+	fName = './output/planets/planets_{0}.png'.format(generateNFTNumber('planets'))
 
 	# Generate random parameters
 	numPlanets  = random.randint(5, 25)
@@ -113,7 +113,7 @@ def genPlanets():
 
 # Makes an image with 
 def genDots():
-	fName = './nfts/dots/dots_{0}.png'.format(generateNFTNumber('dots'))
+	fName = './output/dots/dots_{0}.png'.format(generateNFTNumber('dots'))
 
 	# Generate random parameters
 	paintChance = random.randint(1, 100)

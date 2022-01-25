@@ -1,7 +1,7 @@
 import asyncio
-from configparser import ConverterMapping
 import json
 import math
+import numbers
 import sys
 import os
 from os.path import exists
@@ -29,7 +29,7 @@ desc = json.loads(descFile.read())
 
 # Global variables
 width, height = 200, 200
-genCooldown = 900 # in seconds (30m = 1800s)
+genCooldown = 1 # in seconds (30m = 1800s)
 prefix = 's!'
 activity = discord.Activity(type=discord.ActivityType.listening, name="s!help")
 bot = commands.Bot(command_prefix=prefix, activity=activity, case_insensitive=True)
@@ -50,12 +50,13 @@ with open('./res/colors.txt', 'r') as f:
 def countFiles(dir):
 	# Counts the amount of files in a directory
 	return len([f for f in os.listdir(dir) if os.path.isfile(dir + f)])
-partDirs = './res/parts/slimes/'
-_specialBgs = countFiles(partDirs + 'backgrounds/special/')
-_bodies     = countFiles(partDirs + 'bodies/')
-_eyes       = countFiles(partDirs + 'face/eyes/')
-_mouths     = countFiles(partDirs + 'face/mouths/')
-_hats       = countFiles(partDirs + 'hats/')
+partDirs       = './res/parts/slimes/'
+_specialBgs    = countFiles(partDirs + 'backgrounds/special/')
+_regBodies     = countFiles(partDirs + 'bodies/regular/')
+_specialBodies = countFiles(partDirs + 'bodies/special/')
+_eyes          = countFiles(partDirs + 'face/eyes/')
+_mouths        = countFiles(partDirs + 'face/mouths/')
+_hats          = countFiles(partDirs + 'hats/')
 print(' > Finished initial setup.')
 
 
@@ -200,21 +201,22 @@ def genSlime():
 			id += ('0-' + str(bgColor) + '-X-')
 
 		# Add slime body [90% chance of regular body, 10% special]
-		numNormals = 8
 		if random.randrange(0, 10):
-			roll = str(random.randrange(0, numNormals))
+			roll = str(random.randrange(0, _regBodies))
+			id += ('0-' + str(roll) + '-')
+			layers.append(('{0}bodies/regular/{1}.png'.format(partDirs, roll), True))
 		else:
-			roll = str(random.randrange(numNormals, _bodies))
-		id += (roll + '-')
-		layers.append(('{0}bodies/{1}.png'.format(partDirs, roll), True))
+			roll = str(random.randrange(0, _specialBodies))
+			id += ('1-' + str(roll) + '-')
+			layers.append(('{0}bodies/special/{1}.png'.format(partDirs, roll), True))
 
 		# Eyes
 		roll = str(random.randrange(0, _eyes))
 		id += (roll + '-')
 		layers.append(('{0}face/eyes/{1}.png'.format(partDirs, roll), True))
 
-		# Mouth [75% chance]
-		if random.randint(0, 3) != 0:
+		# Mouth [80% chance]
+		if random.randint(0, 4) != 0:
 			roll = str(random.randrange(0, _mouths))
 			id += (roll + '-')
 			layers.append(('{0}face/mouths/{1}.png'.format(partDirs, roll), True))
@@ -267,7 +269,7 @@ async def gen(ctx):
 @bot.command(brief=desc['view']['short'], description=desc['view']['long'])
 async def view(ctx, arg=None):
 	# Check if given id is valid (incredibly insecure)
-	if not arg or len(arg) != 7:
+	if not arg or len(arg) != 8:
 		await ctx.reply('I need a valid ID you fucking idiot.', delete_after=5)
 		return
 
@@ -300,7 +302,7 @@ async def inv(ctx, filter=''):
 
 	# Filter slimes
 	filtered = []
-	if len(filter) == 7:
+	if len(filter) == 8:
 		for slime in slimes:
 			if passesFilter(filter, slime):
 				filtered.append(slime)
@@ -378,7 +380,7 @@ async def trade(ctx, other, slime1, slime2):
 		return
 
 	# Basic check on given id's
-	if len(slime1) != 7 or len(slime2) != 7:
+	if len(slime1) != 8 or len(slime2) != 8:
 		await ctx.reply('Given ID\'s need to be valid!', delete_after=5)
 		return
 

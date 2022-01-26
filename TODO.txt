@@ -1,0 +1,13 @@
+=TODO's=
+- Move image generation to cloud storage
+	- Allows for more modularization.
+- Separate slime ID and image generation.
+	- Allows for more flexibility with generation. Possibility for custom slime generation.
+- Create custom help command.
+	- Default command is restrictive in its formatting and looks bad.
+
+
+
+=Format=
+- Todo item
+	- Reason behind implementation/fix

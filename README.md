@@ -30,10 +30,6 @@
 - trade <other user> <your slime> <their slime>: Offers a trade to a given user.
 - reset_self: Completely resets your account. Mostly for testing, but maybe users want this ability?
 
-**TODO**
-- Refactor image generation such that they're no longer saved locally, but instead only exist as an ID.
-	- This entails needing to make slimes on-demand when s!view is used.
-	- Saves on server storage space. Probably not as speed efficient.
-
 **Credits**
+- PhinalDestination: SlimeV2 pixel art.
 - KingTenechi: Ideas and help with color verification.

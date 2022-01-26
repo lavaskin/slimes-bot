@@ -20,6 +20,8 @@ from firebase_admin import firestore
 # Globals Setup (I know globals are bad) #
 ##########################################
 
+DEV_MODE = False
+
 # Load in JSON Files
 keyFile = open('./other/auth.json', 'r')
 keys = json.loads(keyFile.read())
@@ -35,6 +37,7 @@ activity = discord.Activity(type=discord.ActivityType.listening, name="s!help")
 bot = commands.Bot(command_prefix=prefix, activity=activity, case_insensitive=True)
 
 # Initialize database
+collection = 'users-dev' if DEV_MODE else 'users'
 firebase_admin.initialize_app(dbCred)
 db = firestore.client()
 
@@ -82,7 +85,7 @@ def formatList(list, c):
 # Makes a new document for a user if they aren't registered
 def checkUser(id, author=''):
 	# Check if already registered
-	ref = db.collection('users').document(id)
+	ref = db.collection(collection).document(id)
 
 	if not ref.get().exists:
 		# Only register a user if they generate a slime
@@ -258,7 +261,7 @@ async def gen(ctx):
 	id    = path[path.rfind('/') + 1:path.rfind('.')]
 
 	# Add slime to the database
-	ref = db.collection('users').document(userID)
+	ref = db.collection(collection).document(userID)
 	ref.update({'slimes': firestore.ArrayUnion([id])})
 
 	# Make embed and send it
@@ -293,7 +296,7 @@ async def inv(ctx, filter=''):
 	userID = str(ctx.author.id)
 	checkUser(userID, ctx.author)
 	buttons = ['⏮️', '⬅️', '➡️', '⏭️']
-	slimes = db.collection('users').document(userID).get().to_dict()['slimes']
+	slimes = db.collection(collection).document(userID).get().to_dict()['slimes']
 
 	# Check if user even has slimes
 	if not slimes:
@@ -385,8 +388,8 @@ async def trade(ctx, other, slime1, slime2):
 		return
 
 	# Check if both users have slimes, including the ones referenced in args
-	ref = db.collection('users').document(userID)
-	otherRef = db.collection('users').document(otherID)
+	ref = db.collection(collection).document(userID)
+	otherRef = db.collection(collection).document(otherID)
 	slimes = ref.get().to_dict()['slimes']
 	otherSlimes = otherRef.get().to_dict()['slimes']
 	if slime1 not in slimes:
@@ -462,7 +465,7 @@ async def reset_self(ctx):
 	else:
 		if reaction.emoji == buttons[0]:
 			dir = './output/'
-			ref = db.collection('users').document(userID)
+			ref = db.collection(collection).document(userID)
 
 			# Reset slimes stored on server
 			slimes = ref.get().to_dict()['slimes']

@@ -29,7 +29,7 @@ desc = json.loads(descFile.read())
 
 # Global variables
 width, height = 200, 200
-genCooldown = 1 # in seconds (30m = 1800s)
+genCooldown = 900 # in seconds (30m = 1800s)
 prefix = 's!'
 activity = discord.Activity(type=discord.ActivityType.listening, name="s!help")
 bot = commands.Bot(command_prefix=prefix, activity=activity, case_insensitive=True)
@@ -68,7 +68,7 @@ print(' > Finished initial setup.')
 def passesFilter(filter, slime):
 	# Check if every character passes the filter
 	for i, c in enumerate(slime):
-		if filter[i] != '.' and filter[i] != c:
+		if filter[i] != '?' and filter[i] != c:
 			return False
 	return True
 

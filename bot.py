@@ -315,8 +315,8 @@ async def inv(ctx, filter=''):
 		return
 
 	# Only post one page if less than listing amount
-	if len(slimes) < perPage:
-		embed = embed=discord.Embed(title='{0}\'s Inventory'.format(username), description=formatList(slimes, '\n'), color=discord.Color.green())
+	if len(filtered) < perPage:
+		embed = embed=discord.Embed(title='{0}\'s Inventory'.format(username), description=formatList(filtered, '\n'), color=discord.Color.green())
 		embed.set_footer(text='{0} slime(s)...'.format(len(filtered)))
 		await ctx.reply(embed=embed)
 		return

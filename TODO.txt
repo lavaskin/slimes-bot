@@ -5,6 +5,3 @@
 	- Allows for more flexibility with generation. Possibility for custom slime generation.
 - Create custom help command.
 	- Default command is restrictive in its formatting and looks bad.
-- Separate slime code into separate cog file.
-	- Cleans up the main file.
-	- Solves the issue of using a 1000 global variables.

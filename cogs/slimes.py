@@ -20,7 +20,7 @@ desc = json.loads(descFile.read())
 
 
 class Slimes(commands.Cog):
-	def __init__(self, bot, dev):
+	def __init__(self, bot, dev=True):
 		# Set random class properties
 		self.bot = bot
 		self.outputDir = './output/dev/' if dev else './output/prod/'
@@ -275,7 +275,7 @@ class Slimes(commands.Cog):
 		await ctx.reply(embed=embed, file=file)
 
 	@commands.command(brief=desc['inv']['short'], description=desc['inv']['long'])
-	@commands.cooldown(1, 120, commands.BucketType.user)
+	@commands.cooldown(1, 60, commands.BucketType.user)
 	async def inv(self, ctx, filter=''):
 		perPage = 10
 		username = str(ctx.author)[:str(ctx.author).rfind('#')]
@@ -357,6 +357,7 @@ class Slimes(commands.Cog):
 
 	@commands.command(brief=desc['trade']['short'], description=desc['trade']['long'])
 	@commands.cooldown(1, 60, commands.BucketType.user)
+	@commands.guild_only()
 	async def trade(self, ctx, other, slime1, slime2):
 		# Check if both users are registerd
 		userID = str(ctx.author.id)

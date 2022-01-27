@@ -6,7 +6,7 @@
 2. Create an /other/firebase.json file from the json Firebase gives you on their site after you initialize a firestore database.
 3. Run using python3 directly.
 
-**Discord Bot Commands (Prefix: s!)**:
+**Bot Commands (Prefix: s!)**:
 - help: Lists out basic descriptions for commands.
 - gen: Generates a unique random slime. 30 minute cooldown.
 - view <slime id>: Queries the slimes and replies with an embed containing the matching one if it exists.

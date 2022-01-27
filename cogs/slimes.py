@@ -212,8 +212,8 @@ class Slimes(commands.Cog):
 				layers.append(('{0}face/mouths/{1}.png'.format(self.partsDir, roll), True))
 			else: id += 'X-'
 
-			# Add hat [50% chance of having a hat]
-			if random.randint(0, 1):
+			# Add hat [75% chance of having a hat]
+			if random.randint(0, 3) != 0:
 				roll = str(random.randrange(0, self.hats))
 				id += roll
 				layers.append(('{0}hats/{1}.png'.format(self.partsDir, roll), True))
@@ -271,7 +271,7 @@ class Slimes(commands.Cog):
 		
 		# Make embed and send it
 		file = discord.File(path)
-		embed = discord.Embed(title='Here\'s slime#{0}!'.format(arg), color=discord.Color.green())
+		embed = discord.Embed(title=f'Here\'s slime#{arg}', color=discord.Color.green())
 		await ctx.reply(embed=embed, file=file)
 
 	@commands.command(brief=desc['inv']['short'], description=desc['inv']['long'])

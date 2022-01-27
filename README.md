@@ -1,4 +1,4 @@
-# Slimes
+# slimes-bot
 *By Lavaskin*
 
 **How to use**:

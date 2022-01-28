@@ -18,5 +18,13 @@
 	"reset_self": {
 		"short": "Completely resets your account",
 		"long": "WARNING: Only do this with 100% certainty. There are no reversals.\nWipes all your slimes from the server and resets your account.\nCooldown: 24 hours"
+	},
+	"fav": {
+		"short": "Favorites a slime",
+		"long": "Adds a given slime to your favorites list. Max of 9 slimes. Running this command on a slime you already have favorited will remove it from your favorites."
+	},
+	"favs": {
+		"short": "Shows all your favorites",
+		"long": "Usage: s!favs <optional: clear>\nGenerates a collage of all your favorite slimes. Given the optional clear argument (either clear or c), your favorites will instead be reset."
 	}
 }

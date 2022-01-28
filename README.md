@@ -15,6 +15,8 @@
 		- Example: The filter '????????' functions the same as running with no filter. The filter '0??????0' will only return slimes with a 0 in the first and last slot and whatever else in the middle.
 - trade <other user> <your slime> <their slime>: Offers a trade to a given user.
 - reset_self: Completely resets your account. Mostly for testing, but maybe users want this ability?
+- fav <slime id>: Adds a given slime to your favorites (Max of 9)
+- favs <optional: clear>: Creates a collage of all favorited slimes. If optional argument is given (clear/c), wipes all favorites.
 
 **Credits**
 - PhinalDestination: SlimeV2 pixel art.

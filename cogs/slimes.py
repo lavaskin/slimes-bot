@@ -81,7 +81,7 @@ class Slimes(commands.Cog):
 			# Only register a user if they generate a slime
 			if not author: return False
 			# Make document
-			data = {'tag': str(author), 'slimes': []}
+			data = {'tag': str(author), 'slimes': [], 'favs': []}
 			ref.set(data)
 			print(' | Registered: {0} ({1})'.format(author, id))
 			return False
@@ -291,10 +291,14 @@ class Slimes(commands.Cog):
 
 		# Filter slimes
 		filtered = []
-		if len(filter) == 8:
-			for slime in slimes:
-				if self.passesFilter(filter, slime):
-					filtered.append(slime)
+		if filter:
+			if len(filter) == 8:
+				for slime in slimes:
+					if self.passesFilter(filter, slime):
+						filtered.append(slime)
+			else:
+				await ctx.reply('Incorrect filter!', delete_after=5)
+				return
 		else:
 			filtered = slimes
 
@@ -388,7 +392,7 @@ class Slimes(commands.Cog):
 		s1img = Image.open(f'{self.outputDir}{slime1}.png')
 		s2img = Image.open(f'{self.outputDir}{slime2}.png')
 		exchangeImg = Image.open('./res/arrows.png')
-		combined = Image.new(mode='RGBA', size=(550, 200), color=(0, 0, 0, 0))
+		combined = Image.new(mode='RGBA', size=((self.width * 2) + 50, self.width), color=(0, 0, 0, 0))
 		combined.paste(s1img, (0, 0))
 		combined.paste(exchangeImg, (200, 0))
 		combined.paste(s2img, (350, 0))
@@ -467,6 +471,84 @@ class Slimes(commands.Cog):
 				await msg.edit(content='Your account has been reset.')
 			elif reaction.emoji == buttons[1]:
 				await msg.edit(content='Your account is safe!')
+
+	@commands.command(brief=desc['fav']['short'], description=desc['fav']['long'])
+	@commands.cooldown(1, 5, commands.BucketType.user)
+	async def fav(self, ctx, id):
+		# Check user is registered
+		userID = str(ctx.author.id)
+		if not self.checkUser(userID):
+			await ctx.reply('You have no slimes!', delete_after=5)
+			return
+
+		# Check they have any slimes and if they own the one mentioned
+		ref = self.db.collection(self.collection).document(userID)
+		slimes = ref.get().to_dict()['slimes']
+		if id not in slimes:
+			await ctx.reply('You don\'t own this slime!', delete_after=5)
+			return
+
+		# Check if already in favorites and if favorites are maxed out
+		favs = ref.get().to_dict()['favs']
+		if id in favs:
+			ref.update({'favs': firestore.ArrayRemove([id])})
+			await ctx.reply(f'**{id}** has been removed from your favorites!')
+		elif len(favs) == 9:
+			await ctx.reply('You can only have a max of 9 favorites!')
+		else:
+			ref.update({'favs': firestore.ArrayUnion([id])})
+			await ctx.reply(f'**{id}** has been added to your favorites!')
+
+	@commands.command(brief=desc['favs']['short'], description=desc['favs']['long'])
+	@commands.cooldown(1, 60, commands.BucketType.user)
+	async def favs(self, ctx, clear=''):
+		# Check user is registered
+		userID = str(ctx.author.id)
+		if not self.checkUser(userID):
+			await ctx.reply('You have no slimes!', delete_after=5)
+			return
+
+		# Check if they have any favs
+		ref = self.db.collection(self.collection).document(userID)
+		favs = ref.get().to_dict()['favs']
+		if not favs:
+			await ctx.reply('You don\'t have any favs!')
+			return
+
+		# Remove all favs from current user
+		if clear in ['c', 'clear']:
+			ref.update({'favs': []})
+			await ctx.reply('Your favorites were reset.')
+			return
+
+
+		# Make collage (this is awful)
+		numFavs = len(favs)
+		idOffset = 100
+		font = ImageFont.truetype("consola.ttf", 20)
+		width = (3 * self.width) if numFavs > 2 else numFavs * self.width
+		height = math.ceil(numFavs / 3) * self.height
+		n = 0
+		combined = Image.new(mode='RGBA', size=(width, height), color=(0, 0, 0, 0))
+		draw = ImageDraw.Draw(combined)
+		fName = f'{self.outputDir}favs_{userID}.png'
+
+		for y in range(0, height, self.height):
+			for x in range(0, width, self.width):
+				if n < numFavs:
+					img = Image.open(f'{self.outputDir}{favs[n]}.png')
+					combined.paste(img, (x, y))
+					draw.text((x + idOffset, y), f"#{favs[n]}", (0, 0, 0), font=font)
+					n += 1
+				else:
+					break
+		
+		# Finish up
+		combined.save(fName)
+		combined.close()
+		file = discord.File(fName)
+		await ctx.reply('Here are your favorites!', file=file)
+		os.remove(fName)
 
 
 def setup(bot):

@@ -492,12 +492,12 @@ class Slimes(commands.Cog):
 		favs = ref.get().to_dict()['favs']
 		if id in favs:
 			ref.update({'favs': firestore.ArrayRemove([id])})
-			await ctx.reply(f'**{id}** has been removed from your favorites!')
+			await ctx.reply(f'**slime#{id}** has been removed from your favorites!')
 		elif len(favs) == 9:
 			await ctx.reply('You can only have a max of 9 favorites!')
 		else:
 			ref.update({'favs': firestore.ArrayUnion([id])})
-			await ctx.reply(f'**{id}** has been added to your favorites!')
+			await ctx.reply(f'**slime#{id}** has been added to your favorites!')
 
 	@commands.command(brief=desc['favs']['short'], description=desc['favs']['long'])
 	@commands.cooldown(1, 60, commands.BucketType.user)
@@ -520,7 +520,6 @@ class Slimes(commands.Cog):
 			ref.update({'favs': []})
 			await ctx.reply('Your favorites were reset.')
 			return
-
 
 		# Make collage (this is awful)
 		numFavs = len(favs)

@@ -9,9 +9,7 @@ from discord.ext import commands
 from PIL import Image
 from PIL import ImageFont
 from PIL import ImageDraw
-import firebase_admin
-from firebase_admin import credentials
-from firebase_admin import firestore
+from firebase_admin import credentials, firestore, initialize_app
 
 
 # Load Descriptions File
@@ -29,7 +27,7 @@ class Slimes(commands.Cog):
 		# Init Database
 		dbCred = credentials.Certificate('./other/firebase.json')
 		self.collection = 'users-dev' if dev else 'users'
-		firebase_admin.initialize_app(dbCred)
+		initialize_app(dbCred)
 		self.db = firestore.client()
 
 		# Load colors
@@ -88,15 +86,31 @@ class Slimes(commands.Cog):
 		else:
 			return True
 
-	# Encodes a given slime ID into a more readable compact form
+	# [Deprecated] Encodes a given slime ID into a more readable compact form
 	def encodeSlimeID(self, id):
 		enc = ''
 		for n in id.split('-'):
-			if n == 'X':
+			if n == '!':
 				enc += '!'
 			else:
 				enc += self.encodeNum(int(n))
 		return enc
+
+	# [Deprecated] Decodes an encoded slime id to the form they're generated as
+	def decodeSlimeID(self, enc):
+		id = ''
+		for c in enc:
+			if c == '!':
+				id += '!-'
+			else:
+				if ord(c) > 96:
+					id += (str(ord(c) - 61) + '-')
+				elif ord(c) > 64:
+					id += (str(ord(c) - 55) + '-')
+				else:
+					id += (c + '-')
+		id = id[:-1] # remove trailing '-'
+		return id
 
 	# Encodes a single number
 	def encodeNum(self, n):
@@ -107,21 +121,10 @@ class Slimes(commands.Cog):
 		else:
 			return chr(n + 61)
 
-	# Decodes an encoded slime id to the form they're generated as [Non-public facing]
-	def decodeSlimeID(self, enc):
-		id = ''
-		for c in enc:
-			if c == '!':
-				id += 'X-'
-			else:
-				if ord(c) > 96:
-					id += (str(ord(c) - 61) + '-')
-				elif ord(c) > 64:
-					id += (str(ord(c) - 55) + '-')
-				else:
-					id += (c + '-')
-		id = id[:-1] # remove trailing 'x'
-		return id
+	# Turn a character from an encoded string into a number
+	def decodeChar(self, n):
+		# TODO
+		pass
 
 	# Generates two different paint colors from the global list (RETURNS THEIR INDEX!)
 	def getPaintColors(self):
@@ -133,6 +136,7 @@ class Slimes(commands.Cog):
 		if c1 == c2:
 			c1 = colorCount - c1 - 1
 		return c1, c2
+
 
 	########################
 	# Generation Functions #
@@ -165,62 +169,51 @@ class Slimes(commands.Cog):
 		while True:
 			bgColor, altColor = self.getPaintColors()
 			layers = [] # Tuples of form: (file path, transparent?)
-
-			# Start ID
-			# Used to remove the possibility of duplicates
-			# Form: bgtype-primarycolor (or special type)-altcolor (stripe color for bg)-eyes-mouth-hat
-			# For example, a red and blue striped slime would start as 1_<redid>-<blueid>-...
-			# -X- means nothing for that catagory was used, like if a bg is a solid color it has no tertiary, or if it has no hat
 			id = ''
-
-			# Get all the layers
 
 			# Background [50% solid color, 45% stripes, 5% special]
 			bgRoll = random.randint(1, 100)
 			if bgRoll > 95:
 				# Apply special background
-				roll = str(random.randrange(0, self.specialBgs))
-				id += ('2-' + roll + '-X-')
+				roll = random.randrange(0, self.specialBgs)
+				id += ('2' + self.encodeNum(roll) + '!')
 				layers.append(('{0}backgrounds/special/{1}.png'.format(self.partsDir, roll), False))
 			elif bgRoll > 50:
 				# Apply stripe layer
-				id += ('1-{0}-{1}-'.format(bgColor, altColor))
+				id += ('1' + self.encodeNum(bgColor) + self.encodeNum(altColor))
 				layers.append(('{0}backgrounds/stripes/{1}.png'.format(self.partsDir, altColor), True))
 			else:
 				# Solid Color
-				id += ('0-' + str(bgColor) + '-X-')
+				id += ('0' + self.encodeNum(bgColor) + '!')
 
 			# Add slime body [90% chance of regular body, 10% special]
 			if random.randrange(0, 10):
-				roll = str(random.randrange(0, self.regBodies))
-				id += ('0-' + str(roll) + '-')
+				roll = random.randrange(0, self.regBodies)
+				id += ('0' + self.encodeNum(roll))
 				layers.append(('{0}bodies/regular/{1}.png'.format(self.partsDir, roll), True))
 			else:
-				roll = str(random.randrange(0, self.specialBodies))
-				id += ('1-' + str(roll) + '-')
+				roll = random.randrange(0, self.specialBodies)
+				id += ('1' + self.encodeNum(roll))
 				layers.append(('{0}bodies/special/{1}.png'.format(self.partsDir, roll), True))
 
 			# Eyes
-			roll = str(random.randrange(0, self.eyes))
-			id += (roll + '-')
+			roll = random.randrange(0, self.eyes)
+			id += self.encodeNum(roll)
 			layers.append(('{0}face/eyes/{1}.png'.format(self.partsDir, roll), True))
 
 			# Mouth [80% chance]
 			if random.randint(0, 4) != 0:
-				roll = str(random.randrange(0, self.mouths))
-				id += (roll + '-')
+				roll = random.randrange(0, self.mouths)
+				id += self.encodeNum(roll)
 				layers.append(('{0}face/mouths/{1}.png'.format(self.partsDir, roll), True))
-			else: id += 'X-'
+			else: id += '!'
 
 			# Add hat [75% chance of having a hat]
 			if random.randint(0, 3) != 0:
-				roll = str(random.randrange(0, self.hats))
-				id += roll
+				roll = random.randrange(0, self.hats)
+				id += self.encodeNum(roll)
 				layers.append(('{0}hats/{1}.png'.format(self.partsDir, roll), True))
-			else: id += 'X'
-
-			# Encode ID
-			id = self.encodeSlimeID(id)
+			else: id += '!'
 
 			# Check that ID doesn't exist. If so, leave the loop
 			if not exists(self.outputDir + id + '.png'):
@@ -252,7 +245,7 @@ class Slimes(commands.Cog):
 
 		# Make embed and send it
 		file = discord.File(path)
-		embed = discord.Embed(title='slime#{0} was generated!'.format(id), color=discord.Color.green())
+		embed = discord.Embed(title=f'slime#{id} was generated!', color=discord.Color.green())
 		await ctx.reply(embed=embed, file=file)
 
 	@commands.command(brief=desc['view']['short'], description=desc['view']['long'])

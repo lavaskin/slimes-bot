@@ -32,15 +32,6 @@ with open('./res/colors.txt', 'r') as f:
 
 
 # Functions
-def encodeSlimeID(id):
-	enc = ''
-	for n in id.split('-'):
-		if n == 'X':
-			enc += '!'
-		else:
-			enc += encodeNum(int(n))
-	return enc
-
 def encodeNum(n):
 	if n < 10:
 		return str(n)
@@ -83,70 +74,56 @@ def genSlime():
 	while True:
 		bgColor, altColor = getPaintColors()
 		layers = [] # Tuples of form: (file path, transparent?)
-
-		# Start ID
-		# Used to remove the possibility of duplicates
-		# Form: bgtype-primarycolor (or special type)-altcolor (stripe color for bg)-eyes-mouth-hat
-		# For example, a red and blue striped slime would start as 1_<redid>-<blueid>-...
-		# -X- means nothing for that catagory was used, like if a bg is a solid color it has no tertiary, or if it has no hat
 		id = ''
-
-		# Get all the layers
 
 		# Background [50% solid color, 45% stripes, 5% special]
 		bgRoll = random.randint(1, 100)
 		if bgRoll > 95:
 			# Apply special background
-			roll = str(random.randrange(0, specialBgs))
-			id += ('2-' + roll + '-X-')
+			roll = random.randrange(0, specialBgs)
+			id += ('2' + encodeNum(roll) + '!')
 			layers.append(('{0}backgrounds/special/{1}.png'.format(partsDir, roll), False))
 		elif bgRoll > 50:
 			# Apply stripe layer
-			id += ('1-{0}-{1}-'.format(bgColor, altColor))
+			id += ('1' + encodeNum(bgColor) + encodeNum(altColor))
 			layers.append(('{0}backgrounds/stripes/{1}.png'.format(partsDir, altColor), True))
 		else:
 			# Solid Color
-			id += ('0-' + str(bgColor) + '-X-')
+			id += ('0' + encodeNum(bgColor) + '!')
 
 		# Add slime body [90% chance of regular body, 10% special]
 		if random.randrange(0, 10):
-			roll = str(random.randrange(0, regBodies))
-			id += ('0-' + str(roll) + '-')
+			roll = random.randrange(0, regBodies)
+			id += ('0' + encodeNum(roll))
 			layers.append(('{0}bodies/regular/{1}.png'.format(partsDir, roll), True))
 		else:
-			roll = str(random.randrange(0, specialBodies))
-			id += ('1-' + str(roll) + '-')
+			roll = random.randrange(0, specialBodies)
+			id += ('1' + encodeNum(roll))
 			layers.append(('{0}bodies/special/{1}.png'.format(partsDir, roll), True))
 
 		# Eyes
-		roll = str(random.randrange(0, eyes))
-		id += (roll + '-')
+		roll = random.randrange(0, eyes)
+		id += encodeNum(roll)
 		layers.append(('{0}face/eyes/{1}.png'.format(partsDir, roll), True))
 
 		# Mouth [80% chance]
 		if random.randint(0, 4) != 0:
-			roll = str(random.randrange(0, mouths))
-			id += (roll + '-')
+			roll = random.randrange(0, mouths)
+			id += encodeNum(roll)
 			layers.append(('{0}face/mouths/{1}.png'.format(partsDir, roll), True))
-		else: id += 'X-'
+		else: id += '!'
 
 		# Add hat [75% chance of having a hat]
 		if random.randint(0, 3) != 0:
-			roll = str(random.randrange(0, hats))
-			id += roll
+			roll = random.randrange(0, hats)
+			id += encodeNum(roll)
 			layers.append(('{0}hats/{1}.png'.format(partsDir, roll), True))
-		else: id += 'X'
-
-		# Encode ID
-		id = encodeSlimeID(id)
+		else: id += '!'
 
 		# Check that ID doesn't exist. If so, leave the loop
 		if not exists(output + id + '.png'):
 			break
-		else:
-			global dupes
-			dupes += 1
-			# print('| DUPE SLIME:', id)
+		else: print('| DUPE SLIME:', id)
 
 	# Roll the layers and return the rolled file
 	fName = output + id + '.png'

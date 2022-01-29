@@ -26,8 +26,9 @@ async def on_ready():
 if __name__ == '__main__':
 	# Get token
 	keyFile = open('./other/auth.json', 'r')
-	keys = json.loads(keyFile.read())
+	token = json.loads(keyFile.read())['discordToken']
+	keyFile.close()
 
 	# Load cogs and run
 	bot.load_extension('cogs.slimes')
-	bot.run(keys['discordToken'], bot=True, reconnect=True)
+	bot.run(token, bot=True, reconnect=True)

@@ -24,9 +24,12 @@ async def on_ready():
 	print(' > Discord connected, bot on:')
 
 if __name__ == '__main__':
+	dev = False
+
 	# Get token
 	keyFile = open('./other/auth.json', 'r')
-	token = json.loads(keyFile.read())['discordToken']
+	tokenKey = 'devToken' if dev else 'prodToken'  # Change this to just = 'prodToken' if there's no dev build
+	token = json.loads(keyFile.read())[tokenKey]
 	keyFile.close()
 
 	# Load cogs and run

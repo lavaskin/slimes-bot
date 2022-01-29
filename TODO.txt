@@ -4,3 +4,4 @@
 - Create custom help command.
 	- Default command is restrictive in its formatting and looks bad.
 - Make favorites appear at the top of the inventory list
+- Make dev mode an environment variable

@@ -2,7 +2,7 @@
 *By Lavaskin*
 
 **How to use**:
-1. Make an /other/auth.json file in the form: {"discordToken":"your token here"}
+1. Make an /other/auth.json file in the form: {"prodToken":"your token here", "devToken":"dev token here if applicable"}
 2. Create an /other/firebase.json file from the json Firebase gives you on their site after you initialize a firestore database.
 3. Run bot.py using python3 directly.
 

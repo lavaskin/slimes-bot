@@ -81,7 +81,7 @@ class Slimes(commands.Cog):
 			# Make document
 			data = {'tag': str(author), 'slimes': [], 'favs': []}
 			ref.set(data)
-			print(' | Registered: {0} ({1})'.format(author, id))
+			print(f' | Registered: {author} ({id})')
 			return False
 		else:
 			return True
@@ -177,11 +177,11 @@ class Slimes(commands.Cog):
 				# Apply special background
 				roll = random.randrange(0, self.specialBgs)
 				id += ('2' + self.encodeNum(roll) + '!')
-				layers.append(('{0}backgrounds/special/{1}.png'.format(self.partsDir, roll), False))
+				layers.append((f'{self.partsDir}backgrounds/special/{roll}.png', False))
 			elif bgRoll > 50:
 				# Apply stripe layer
 				id += ('1' + self.encodeNum(bgColor) + self.encodeNum(altColor))
-				layers.append(('{0}backgrounds/stripes/{1}.png'.format(self.partsDir, altColor), True))
+				layers.append((f'{self.partsDir}backgrounds/stripes/{altColor}.png', True))
 			else:
 				# Solid Color
 				id += ('0' + self.encodeNum(bgColor) + '!')
@@ -190,29 +190,29 @@ class Slimes(commands.Cog):
 			if random.randrange(0, 10):
 				roll = random.randrange(0, self.regBodies)
 				id += ('0' + self.encodeNum(roll))
-				layers.append(('{0}bodies/regular/{1}.png'.format(self.partsDir, roll), True))
+				layers.append((f'{self.partsDir}bodies/regular/{roll}.png', True))
 			else:
 				roll = random.randrange(0, self.specialBodies)
 				id += ('1' + self.encodeNum(roll))
-				layers.append(('{0}bodies/special/{1}.png'.format(self.partsDir, roll), True))
+				layers.append((f'{self.partsDir}bodies/special/{roll}.png', True))
 
 			# Eyes
 			roll = random.randrange(0, self.eyes)
 			id += self.encodeNum(roll)
-			layers.append(('{0}face/eyes/{1}.png'.format(self.partsDir, roll), True))
+			layers.append((f'{self.partsDir}face/eyes/{roll}.png', True))
 
 			# Mouth [80% chance]
 			if random.randint(0, 4) != 0:
 				roll = random.randrange(0, self.mouths)
 				id += self.encodeNum(roll)
-				layers.append(('{0}face/mouths/{1}.png'.format(self.partsDir, roll), True))
+				layers.append((f'{self.partsDir}face/mouths/{roll}.png', True))
 			else: id += '!'
 
 			# Add hat [75% chance of having a hat]
 			if random.randint(0, 3) != 0:
 				roll = random.randrange(0, self.hats)
 				id += self.encodeNum(roll)
-				layers.append(('{0}hats/{1}.png'.format(self.partsDir, roll), True))
+				layers.append((f'{self.partsDir}hats/{roll}.png', True))
 			else: id += '!'
 
 			# Check that ID doesn't exist. If so, leave the loop
@@ -259,7 +259,7 @@ class Slimes(commands.Cog):
 		
 		# Check if the slime exists
 		if not exists(path):
-			await ctx.reply('**slime#{0}** doesn\'t exist!'.format(arg))
+			await ctx.reply(f'**slime#{arg}** doesn\'t exist!')
 			return
 		
 		# Make embed and send it
@@ -302,8 +302,8 @@ class Slimes(commands.Cog):
 
 		# Only post one page if less than listing amount
 		if len(filtered) < perPage:
-			embed = embed=discord.Embed(title='{0}\'s Inventory'.format(username), description=self.formatList(filtered, '\n'), color=discord.Color.green())
-			embed.set_footer(text='{0} slime(s)...'.format(len(filtered)))
+			embed = embed=discord.Embed(title=f'{username}\'s Inventory', description=self.formatList(filtered, '\n'), color=discord.Color.green())
+			embed.set_footer(text=f'{len(filtered)} slime(s)...')
 			await ctx.reply(embed=embed)
 			return
 
@@ -319,8 +319,8 @@ class Slimes(commands.Cog):
 			else:
 				page = filtered[i * perPage:]
 			# Setup pages embed
-			embed=discord.Embed(title='{0}\'s Inventory'.format(username), description=self.formatList(page, '\n'), color=discord.Color.green())
-			embed.set_footer(text='Slimes {0}-{1} of {2}...'.format((i * perPage) + 1, max, len(filtered)))
+			embed=discord.Embed(title=f'{username}\'s Inventory', description=self.formatList(page, '\n'), color=discord.Color.green())
+			embed.set_footer(text=f'Slimes {(i * perPage) + 1}-{max} of {len(filtered)}...')
 			pages.append(embed)
 
 		# Setup embed for reactions

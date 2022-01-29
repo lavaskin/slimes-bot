@@ -385,7 +385,7 @@ class Slimes(commands.Cog):
 		s1img = Image.open(f'{self.outputDir}{slime1}.png')
 		s2img = Image.open(f'{self.outputDir}{slime2}.png')
 		exchangeImg = Image.open('./res/arrows.png')
-		combined = Image.new(mode='RGBA', size=((self.width * 2) + 50, self.width), color=(0, 0, 0, 0))
+		combined = Image.new(mode='RGBA', size=((self.width * 2) + 150, self.width), color=(0, 0, 0, 0))
 		combined.paste(s1img, (0, 0))
 		combined.paste(exchangeImg, (200, 0))
 		combined.paste(s2img, (350, 0))

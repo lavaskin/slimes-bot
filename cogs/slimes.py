@@ -17,7 +17,7 @@ descFile = open('./other/desc.json')
 desc = json.loads(descFile.read())
 
 # Get Dev Mode
-env = bool(os.getenv('SLIME_DEV', 'True'))
+env = os.getenv('SLIME_DEV', 'True')
 dev = True if env == 'True' else False
 
 

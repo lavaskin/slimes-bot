@@ -235,7 +235,7 @@ class Slimes(commands.Cog):
 	################
 
 	@commands.command(brief=desc['gen']['short'], description=desc['gen']['long'])
-	# @commands.cooldown(1, 900, commands.BucketType.user)
+	@commands.cooldown(1, 900, commands.BucketType.user)
 	async def gen(self, ctx):
 		userID = str(ctx.author.id)
 		self.checkUser(userID, ctx.author)
@@ -358,7 +358,7 @@ class Slimes(commands.Cog):
 					await msg.edit(embed=pages[cur])
 
 	@commands.command(brief=desc['trade']['short'], description=desc['trade']['long'])
-	# @commands.cooldown(1, 60, commands.BucketType.user)
+	@commands.cooldown(1, 60, commands.BucketType.user)
 	@commands.guild_only()
 	async def trade(self, ctx, other, slime1, slime2):
 		# Check if both users are registerd

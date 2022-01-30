@@ -4,7 +4,8 @@
 **How to use**:
 1. Make an /other/auth.json file in the form: {"prodToken":"your token here", "devToken":"dev token here if applicable"}
 2. Create an /other/firebase.json file from the json Firebase gives you on their site after you initialize a firestore database.
-3. Run bot.py using python3 directly.
+3. Put the font you'll use for image generation into a file called other/font.txt. Windows users can use 'consola.ttf. Linux users need to specify a path.
+4. Run bot.py using python3 directly.
 
 **Bot Commands (Prefix: s!)**:
 - help: Lists out basic descriptions for commands.

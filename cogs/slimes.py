@@ -4,6 +4,7 @@ import math
 import os
 from os.path import exists
 import random
+from traceback import print_tb
 import discord
 from discord.ext import commands
 from PIL import Image
@@ -23,6 +24,7 @@ class Slimes(commands.Cog):
 		self.bot = bot
 		self.outputDir = './output/dev/' if dev else './output/prod/'
 		self.width, self.height = 200, 200
+		self.fontPath = open('./other/font.txt', 'r').readline()
 
 		# Init Database
 		dbCred = credentials.Certificate('./other/firebase.json')
@@ -391,10 +393,11 @@ class Slimes(commands.Cog):
 		combined.paste(s2img, (350, 0))
 		fName = f'{self.outputDir}trade_{slime1}_{slime2}.png'
 		# Place text
-		font = ImageFont.truetype("consola.ttf", 20)
+		font = ImageFont.truetype(self.fontPath, 20, encoding='unic')
+		fontLen, _ = font.getsize('#' + slime1)
 		draw = ImageDraw.Draw(combined)
-		draw.text((100, 0), f"#{slime1}", (0, 0, 0), font=font)
-		draw.text((450, 0), f"#{slime2}", (0, 0, 0), font=font)
+		draw.text((self.width - fontLen, 0), f"#{slime1}", (0, 0, 0), font=font)
+		draw.text((((self.width * 2) + 150) - fontLen, 0), f"#{slime2}", (0, 0, 0), font=font)
 		# Save image
 		combined.save(fName)
 		combined.close()
@@ -516,8 +519,8 @@ class Slimes(commands.Cog):
 
 		# Make collage (this is awful)
 		numFavs = len(favs)
-		idOffset = 100
-		font = ImageFont.truetype("consola.ttf", 20)
+		font = ImageFont.truetype(self.fontPath, 20)
+		fontLen,  _ = font.getsize('#' + favs[0])
 		width = (3 * self.width) if numFavs > 2 else numFavs * self.width
 		height = math.ceil(numFavs / 3) * self.height
 		n = 0
@@ -530,7 +533,7 @@ class Slimes(commands.Cog):
 				if n < numFavs:
 					img = Image.open(f'{self.outputDir}{favs[n]}.png')
 					combined.paste(img, (x, y))
-					draw.text((x + idOffset, y), f"#{favs[n]}", (0, 0, 0), font=font)
+					draw.text(((x + self.width) - fontLen, y), f"#{favs[n]}", (0, 0, 0), font=font)
 					n += 1
 				else:
 					break

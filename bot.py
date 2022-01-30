@@ -25,7 +25,8 @@ async def on_ready():
 	print(' > Discord connected, bot on:')
 
 if __name__ == '__main__':
-	dev = bool(os.getenv('SLIME_DEV', True))
+	env = bool(os.getenv('SLIME_DEV', 'True'))
+	dev = True if env == 'True' else False
 	print(' > Dev Mode:', str(dev))
 
 	# Get token

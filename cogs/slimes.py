@@ -16,9 +16,13 @@ from firebase_admin import credentials, firestore, initialize_app
 descFile = open('./other/desc.json')
 desc = json.loads(descFile.read())
 
+# Get Dev Mode
+env = bool(os.getenv('SLIME_DEV', 'True'))
+dev = True if env == 'True' else False
+
 
 class Slimes(commands.Cog):
-	def __init__(self, bot, dev=True):
+	def __init__(self, bot):
 		# Set random class properties
 		self.bot = bot
 		self.outputDir = './output/dev/' if dev else './output/prod/'
@@ -546,4 +550,4 @@ class Slimes(commands.Cog):
 
 
 def setup(bot):
-	bot.add_cog(Slimes(bot, dev=bool(os.getenv('SLIME_DEV', True))))
+	bot.add_cog(Slimes(bot))

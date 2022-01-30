@@ -4,7 +4,6 @@ import math
 import os
 from os.path import exists
 import random
-from traceback import print_tb
 import discord
 from discord.ext import commands
 from PIL import Image
@@ -547,4 +546,4 @@ class Slimes(commands.Cog):
 
 
 def setup(bot):
-	bot.add_cog(Slimes(bot, dev=False))
+	bot.add_cog(Slimes(bot, dev=bool(os.getenv('SLIME_DEV', True))))

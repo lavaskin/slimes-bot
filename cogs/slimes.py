@@ -76,11 +76,12 @@ class Slimes(commands.Cog):
 		return res[:-1]
 
 	# Makes a new document for a user if they aren't registered
-	def checkUser(self, id):
+	def checkUser(self, id, author=None):
 		# Check if already registered
 		ref = self.db.collection(self.collection).document(id)
 
 		if not ref.get().exists:
+			if not author: return False
 			# Make document
 			data = {'tag': str(author), 'slimes': [], 'favs': []}
 			ref.set(data)
@@ -236,7 +237,7 @@ class Slimes(commands.Cog):
 	@commands.cooldown(1, 900, commands.BucketType.user)
 	async def gen(self, ctx):
 		userID = str(ctx.author.id)
-		self.checkUser(userID)
+		self.checkUser(userID, ctx.author)
 
 		# Generate slime and get id
 		path = self.genSlime()

@@ -76,19 +76,17 @@ class Slimes(commands.Cog):
 		return res[:-1]
 
 	# Makes a new document for a user if they aren't registered
-	def checkUser(self, id, author=''):
+	def checkUser(self, id):
 		# Check if already registered
 		ref = self.db.collection(self.collection).document(id)
 
 		if not ref.get().exists:
-			# Only register a user if they generate a slime
-			if not author: return False
 			# Make document
 			data = {'tag': str(author), 'slimes': [], 'favs': []}
 			ref.set(data)
-			print(f' | Registered: {author} ({id})')
 			return False
 		else:
+			# They are already registered
 			return True
 
 	# [Deprecated] Encodes a given slime ID into a more readable compact form
@@ -238,7 +236,7 @@ class Slimes(commands.Cog):
 	@commands.cooldown(1, 900, commands.BucketType.user)
 	async def gen(self, ctx):
 		userID = str(ctx.author.id)
-		self.checkUser(userID, ctx.author)
+		self.checkUser(userID)
 
 		# Generate slime and get id
 		path = self.genSlime()
@@ -274,11 +272,11 @@ class Slimes(commands.Cog):
 
 	@commands.command(brief=desc['inv']['short'], description=desc['inv']['long'])
 	@commands.cooldown(1, 60, commands.BucketType.user)
-	async def inv(self, ctx, filter=''):
+	async def inv(self, ctx, filter=None):
 		perPage = 10
 		username = str(ctx.author)[:str(ctx.author).rfind('#')]
 		userID = str(ctx.author.id)
-		self.checkUser(userID, ctx.author)
+		self.checkUser(userID)
 		buttons = ['⏮️', '⬅️', '➡️', '⏭️']
 		slimes = self.db.collection(self.collection).document(userID).get().to_dict()['slimes']
 
@@ -306,7 +304,7 @@ class Slimes(commands.Cog):
 			return
 
 		# Only post one page if less than listing amount
-		if len(filtered) < perPage:
+		if len(filtered) <= perPage:
 			embed = embed=discord.Embed(title=f'{username}\'s Inventory', description=self.formatList(filtered, '\n'), color=discord.Color.green())
 			embed.set_footer(text=f'{len(filtered)} slime(s)...')
 			await ctx.reply(embed=embed)
@@ -365,9 +363,9 @@ class Slimes(commands.Cog):
 		userID = str(ctx.author.id)
 		otherID = other[3:-1]
 		if userID == otherID:
-			await ctx.reply('You can\t trade with yourself, dumbass.', delete_after=5)
+			await ctx.reply('You can\t trade with yourself.', delete_after=5)
 			return
-		elif not self.checkUser(userID, ctx.author) or not self.checkUser(otherID):
+		if not self.checkUser(userID) or not self.checkUser(otherID):
 			await ctx.reply('You both need to be registered to trade!', delete_after=5)
 			return
 
@@ -377,14 +375,16 @@ class Slimes(commands.Cog):
 			return
 
 		# Check if both users have slimes, including the ones referenced in args
-		ref      = self.db.collection(self.collection).document(userID)
-		otherRef = self.db.collection(self.collection).document(otherID)
+		ref         = self.db.collection(self.collection).document(userID)
+		otherRef    = self.db.collection(self.collection).document(otherID)
 		slimes      = ref.get().to_dict()['slimes']
 		otherSlimes = otherRef.get().to_dict()['slimes']
 		if slime1 not in slimes:
-			await ctx.reply(f'You don\'t own {slime1}!', delete_after=5)
-		elif slime2 not in otherSlimes:
-			await ctx.reply(f'They doesn\t own {slime2}!', delete_after=5)
+			await ctx.reply(f'You don\'t own **{slime1}**!', delete_after=5)
+			return
+		if slime2 not in otherSlimes:
+			await ctx.reply(f'They don\'t own **{slime2}**!', delete_after=5)
+			return
 
 		# Check if slimes are favorited:
 		favs      = ref.get().to_dict()['favs']

@@ -123,7 +123,10 @@ def genSlime():
 		# Check that ID doesn't exist. If so, leave the loop
 		if not exists(output + id + '.png'):
 			break
-		else: print('| DUPE SLIME:', id)
+		else:
+			global dupes
+			dupes += 1
+			print('| DUPE SLIME:', id)
 
 	# Roll the layers and return the rolled file
 	fName = output + id + '.png'

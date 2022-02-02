@@ -2,7 +2,7 @@
 *By Lavaskin*
 
 **How to use**:
-1. Fill out all the relevant information in the .env file.
+1. Fill out all the relevant information in a '.env' file.
 2. Create an /other/firebase.json file from the json Firebase gives you on their site after you initialize a firestore database.
 1. Run bot.py using python3 directly.
 

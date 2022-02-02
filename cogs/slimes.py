@@ -251,16 +251,16 @@ class Slimes(commands.Cog):
 		ref = self.db.collection(self.collection).document(userID)
 		ref.update({'slimes': firestore.ArrayUnion([id])})
 
-		# Upload slime to firebase storage
-		bucket = storage.bucket()
-		bucketPath = 'dev/' if dev else 'prod/'
-		blob = bucket.blob(f'{bucketPath}{id}.png')
-		blob.upload_from_filename(path)
-
 		# Make embed and send it
 		file = discord.File(path)
 		embed = discord.Embed(title=f'slime#{id} was generated!', color=discord.Color.green())
 		await ctx.reply(embed=embed, file=file)
+
+		# Upload slime to firebase storage (Takes a second, better to do after response is given)
+		bucket = storage.bucket()
+		bucketPath = 'dev/' if dev else 'prod/'
+		blob = bucket.blob(f'{bucketPath}{id}.png')
+		blob.upload_from_filename(path)
 
 	@commands.command(brief=desc['view']['short'], description=desc['view']['long'])
 	async def view(self, ctx, arg=None):

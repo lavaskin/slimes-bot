@@ -2,9 +2,11 @@ import json
 import os
 import discord
 from discord.ext import commands
+from dotenv import load_dotenv
 
 
 # Setup Bot
+load_dotenv()
 activity = discord.Activity(type=discord.ActivityType.listening, name="s!help")
 bot = commands.Bot(command_prefix='s!', activity=activity, case_insensitive=True)
 
@@ -27,14 +29,9 @@ async def on_ready():
 if __name__ == '__main__':
 	env = os.getenv('SLIME_DEV', 'True')
 	dev = True if env == 'True' else False
+	token = 'DISCORD_DEV' if dev else 'DISCORD_PROD'
 	print(' > Dev Mode:', str(dev))
-
-	# Get token
-	keyFile = open('./other/auth.json', 'r')
-	tokenKey = 'devToken' if dev else 'prodToken'  # Change this to just = 'prodToken' if there's no dev build
-	token = json.loads(keyFile.read())[tokenKey]
-	keyFile.close()
 
 	# Load cogs and run
 	bot.load_extension('cogs.slimes')
-	bot.run(token, bot=True, reconnect=True)
+	bot.run(os.getenv(token), bot=True, reconnect=True)

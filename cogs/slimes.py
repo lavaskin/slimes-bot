@@ -9,7 +9,7 @@ from discord.ext import commands
 from PIL import Image
 from PIL import ImageFont
 from PIL import ImageDraw
-from firebase_admin import credentials, firestore, initialize_app
+from firebase_admin import credentials, firestore, initialize_app, storage
 
 
 # Load Descriptions File
@@ -27,13 +27,15 @@ class Slimes(commands.Cog):
 		self.bot = bot
 		self.outputDir = './output/dev/' if dev else './output/prod/'
 		self.width, self.height = 200, 200
-		self.fontPath = open('./other/font.txt', 'r').readline()
+		# self.fontPath = open('./other/font.txt', 'r').readline()
+		self.fontPath = os.getenv('FONT_PATH', 'consola.ttf')
 
 		# Init Database
 		dbCred = credentials.Certificate('./other/firebase.json')
 		self.collection = 'users-dev' if dev else 'users'
-		initialize_app(dbCred)
+		initialize_app(dbCred, {'storageBucket': os.getenv('STORAGE_BUCKET')})
 		self.db = firestore.client()
+		self.bucket = storage.bucket()
 
 		# Load colors
 		self.colors = []
@@ -94,8 +96,8 @@ class Slimes(commands.Cog):
 	def encodeSlimeID(self, id):
 		enc = ''
 		for n in id.split('-'):
-			if n == '!':
-				enc += '!'
+			if n == 'z':
+				enc += 'z'
 			else:
 				enc += self.encodeNum(int(n))
 		return enc
@@ -104,8 +106,8 @@ class Slimes(commands.Cog):
 	def decodeSlimeID(self, enc):
 		id = ''
 		for c in enc:
-			if c == '!':
-				id += '!-'
+			if c == 'z':
+				id += 'z-'
 			else:
 				if ord(c) > 96:
 					id += (str(ord(c) - 61) + '-')
@@ -180,7 +182,7 @@ class Slimes(commands.Cog):
 			if bgRoll > 95:
 				# Apply special background
 				roll = random.randrange(0, self.specialBgs)
-				id += ('2' + self.encodeNum(roll) + '!')
+				id += ('2' + self.encodeNum(roll) + 'z')
 				layers.append((f'{self.partsDir}backgrounds/special/{roll}.png', False))
 			elif bgRoll > 50:
 				# Apply stripe layer
@@ -188,7 +190,7 @@ class Slimes(commands.Cog):
 				layers.append((f'{self.partsDir}backgrounds/stripes/{altColor}.png', True))
 			else:
 				# Solid Color
-				id += ('0' + self.encodeNum(bgColor) + '!')
+				id += ('0' + self.encodeNum(bgColor) + 'z')
 
 			# Add slime body [90% chance of regular body, 10% special]
 			if random.randrange(0, 10):
@@ -210,14 +212,14 @@ class Slimes(commands.Cog):
 				roll = random.randrange(0, self.mouths)
 				id += self.encodeNum(roll)
 				layers.append((f'{self.partsDir}face/mouths/{roll}.png', True))
-			else: id += '!'
+			else: id += 'z'
 
 			# Add hat [75% chance of having a hat]
 			if random.randint(0, 3) != 0:
 				roll = random.randrange(0, self.hats)
 				id += self.encodeNum(roll)
 				layers.append((f'{self.partsDir}hats/{roll}.png', True))
-			else: id += '!'
+			else: id += 'z'
 
 			# Check that ID doesn't exist. If so, leave the loop
 			if not exists(self.outputDir + id + '.png'):
@@ -228,6 +230,7 @@ class Slimes(commands.Cog):
 		fName = self.outputDir + id + '.png'
 		self.rollLayers(fName, layers, bgColor)
 		return fName
+
 
 	################
 	# Bot Commands #
@@ -246,6 +249,12 @@ class Slimes(commands.Cog):
 		# Add slime to the database
 		ref = self.db.collection(self.collection).document(userID)
 		ref.update({'slimes': firestore.ArrayUnion([id])})
+
+		# Upload slime to firebase storage
+		bucket = storage.bucket()
+		bucketPath = 'dev/' if dev else 'prod/'
+		blob = bucket.blob(f'{bucketPath}{id}.png')
+		blob.upload_from_string(path)
 
 		# Make embed and send it
 		file = discord.File(path)
@@ -472,6 +481,9 @@ class Slimes(commands.Cog):
 						for f in allSlimes:
 							if os.path.isfile(self.outputDir + f) and f[:f.rfind('.')] == slime:
 								os.remove(self.outputDir + f)
+				
+				# Reset slimes stored in firebase storage
+				# TODO
 
 				# Remove user document in database and respond
 				ref.delete()

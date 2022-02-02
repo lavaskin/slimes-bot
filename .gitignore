@@ -1,4 +1,4 @@
 __pycache__
+.env
 output
-other/auth.json
 other/firebase.json

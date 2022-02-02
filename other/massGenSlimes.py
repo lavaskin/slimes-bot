@@ -81,7 +81,7 @@ def genSlime():
 		if bgRoll > 95:
 			# Apply special background
 			roll = random.randrange(0, specialBgs)
-			id += ('2' + encodeNum(roll) + '!')
+			id += ('2' + encodeNum(roll) + 'z')
 			layers.append(('{0}backgrounds/special/{1}.png'.format(partsDir, roll), False))
 		elif bgRoll > 50:
 			# Apply stripe layer
@@ -89,7 +89,7 @@ def genSlime():
 			layers.append(('{0}backgrounds/stripes/{1}.png'.format(partsDir, altColor), True))
 		else:
 			# Solid Color
-			id += ('0' + encodeNum(bgColor) + '!')
+			id += ('0' + encodeNum(bgColor) + 'z')
 
 		# Add slime body [90% chance of regular body, 10% special]
 		if random.randrange(0, 10):
@@ -111,14 +111,14 @@ def genSlime():
 			roll = random.randrange(0, mouths)
 			id += encodeNum(roll)
 			layers.append(('{0}face/mouths/{1}.png'.format(partsDir, roll), True))
-		else: id += '!'
+		else: id += 'z'
 
 		# Add hat [75% chance of having a hat]
 		if random.randint(0, 3) != 0:
 			roll = random.randrange(0, hats)
 			id += encodeNum(roll)
 			layers.append(('{0}hats/{1}.png'.format(partsDir, roll), True))
-		else: id += '!'
+		else: id += 'z'
 
 		# Check that ID doesn't exist. If so, leave the loop
 		if not exists(output + id + '.png'):

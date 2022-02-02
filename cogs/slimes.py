@@ -58,6 +58,7 @@ class Slimes(commands.Cog):
 		random.seed()
 		print(' > Finished initial setup.')
 
+
 	#####################
 	# Utility Functions #
 	#####################
@@ -254,7 +255,7 @@ class Slimes(commands.Cog):
 		bucket = storage.bucket()
 		bucketPath = 'dev/' if dev else 'prod/'
 		blob = bucket.blob(f'{bucketPath}{id}.png')
-		blob.upload_from_string(path)
+		blob.upload_from_filename(path)
 
 		# Make embed and send it
 		file = discord.File(path)

@@ -1,9 +1,12 @@
 import asyncio
+from fnmatch import fnmatch
 import json
 import math
 import os
 from os.path import exists
 import random
+from statistics import fmean
+from tabnanny import check
 import discord
 from discord.ext import commands
 from PIL import Image
@@ -93,32 +96,6 @@ class Slimes(commands.Cog):
 			# They are already registered
 			return True
 
-	# [Deprecated] Encodes a given slime ID into a more readable compact form
-	def encodeSlimeID(self, id):
-		enc = ''
-		for n in id.split('-'):
-			if n == 'z':
-				enc += 'z'
-			else:
-				enc += self.encodeNum(int(n))
-		return enc
-
-	# [Deprecated] Decodes an encoded slime id to the form they're generated as
-	def decodeSlimeID(self, enc):
-		id = ''
-		for c in enc:
-			if c == 'z':
-				id += 'z-'
-			else:
-				if ord(c) > 96:
-					id += (str(ord(c) - 61) + '-')
-				elif ord(c) > 64:
-					id += (str(ord(c) - 55) + '-')
-				else:
-					id += (c + '-')
-		id = id[:-1] # remove trailing '-'
-		return id
-
 	# Encodes a single number
 	def encodeNum(self, n):
 		if n < 10:
@@ -130,8 +107,15 @@ class Slimes(commands.Cog):
 
 	# Turn a character from an encoded string into a number
 	def decodeChar(self, n):
-		# TODO
-		pass
+		if n == 'z':
+			return 'z'
+		else:
+			if ord(n) > 96:
+				return ord(n) - 61
+			elif ord(n) > 64:
+				return ord(n) - 55
+			else:
+				return int(n)
 
 	# Generates two different paint colors from the global list (RETURNS THEIR INDEX!)
 	def getPaintColors(self):
@@ -144,11 +128,6 @@ class Slimes(commands.Cog):
 			c1 = colorCount - c1 - 1
 		return c1, c2
 
-
-	########################
-	# Generation Functions #
-	########################
-
 	# Given a list of files, creates a layered image of them in order
 	# Used to smooth the process of making new image collections
 	def rollLayers(self, fName, layers, bgColor):
@@ -157,7 +136,10 @@ class Slimes(commands.Cog):
 
 		# Roll Layers
 		for file in layers:
-			layer = Image.open(file[0])
+			try:
+				layer = Image.open(file[0])
+			except FileNotFoundError:
+				return None
 
 			# Check if the layer needs a transparency mask
 			if file[1]:
@@ -169,13 +151,52 @@ class Slimes(commands.Cog):
 		# Save the image/close
 		final.save(fName)
 		final.close()
+		return fName
 
-	# Places layers of randomly chosen elements to make a slime image
-	def genSlime(self):
+
+	########################
+	# Generation Functions #
+	########################
+
+	# Given a slime ID, creates a slime
+	def genSlimeLayers(self, id):
+		splitID = [self.decodeChar(c) for c in id]
+		layers = []
+
+		# id[0] = background variant (0 = solid, 1 = stripes, 2 = specials)
+		# id[1] = primary background (solid color/special bg)
+		# id[2] = secondary background color (stripes)
+		if splitID[0] == 1:
+			layers.append((f'{self.partsDir}backgrounds/stripes/{splitID[2]}.png', True))
+		elif splitID[0] == 2:
+			layers.append((f'{self.partsDir}backgrounds/special/{splitID[1]}.png', False))
+
+		# id[3] = body varient (0 = normal, 1 = special)
+		# id[4] = body
+		if splitID[3] == 0:
+			layers.append((f'{self.partsDir}bodies/regular/{splitID[4]}.png', True))
+		elif splitID[3] == 1:
+			layers.append((f'{self.partsDir}bodies/special/{splitID[4]}.png', True))
+		
+		# id[5] = eyes
+		layers.append((f'{self.partsDir}face/eyes/{splitID[5]}.png', True))
+
+		# id[6] = mouth
+		if splitID[6] != 'z':
+			layers.append((f'{self.partsDir}face/mouths/{splitID[6]}.png', True))
+
+		# id[7] = hat
+		if splitID[7] != 'z':
+			layers.append((f'{self.partsDir}hats/{splitID[7]}.png', True))
+
+		return layers
+
+	# Based on random parameters, generates a slime ID
+	# Returns the ID and background color for rollLayers to use
+	def genSlimeID(self):
 		# Loops until a unique ID is created
 		while True:
 			bgColor, altColor = self.getPaintColors()
-			layers = [] # Tuples of form: (file path, transparent?)
 			id = ''
 
 			# Background [50% solid color, 45% stripes, 5% special]
@@ -184,11 +205,9 @@ class Slimes(commands.Cog):
 				# Apply special background
 				roll = random.randrange(0, self.specialBgs)
 				id += ('2' + self.encodeNum(roll) + 'z')
-				layers.append((f'{self.partsDir}backgrounds/special/{roll}.png', False))
 			elif bgRoll > 50:
 				# Apply stripe layer
 				id += ('1' + self.encodeNum(bgColor) + self.encodeNum(altColor))
-				layers.append((f'{self.partsDir}backgrounds/stripes/{altColor}.png', True))
 			else:
 				# Solid Color
 				id += ('0' + self.encodeNum(bgColor) + 'z')
@@ -197,40 +216,45 @@ class Slimes(commands.Cog):
 			if random.randrange(0, 10):
 				roll = random.randrange(0, self.regBodies)
 				id += ('0' + self.encodeNum(roll))
-				layers.append((f'{self.partsDir}bodies/regular/{roll}.png', True))
 			else:
 				roll = random.randrange(0, self.specialBodies)
 				id += ('1' + self.encodeNum(roll))
-				layers.append((f'{self.partsDir}bodies/special/{roll}.png', True))
 
 			# Eyes
 			roll = random.randrange(0, self.eyes)
 			id += self.encodeNum(roll)
-			layers.append((f'{self.partsDir}face/eyes/{roll}.png', True))
 
 			# Mouth [80% chance]
 			if random.randint(0, 4) != 0:
 				roll = random.randrange(0, self.mouths)
 				id += self.encodeNum(roll)
-				layers.append((f'{self.partsDir}face/mouths/{roll}.png', True))
 			else: id += 'z'
 
 			# Add hat [75% chance of having a hat]
 			if random.randint(0, 3) != 0:
 				roll = random.randrange(0, self.hats)
 				id += self.encodeNum(roll)
-				layers.append((f'{self.partsDir}hats/{roll}.png', True))
 			else: id += 'z'
 
 			# Check that ID doesn't exist. If so, leave the loop
 			if not exists(self.outputDir + id + '.png'):
-				break
+				return id, bgColor
 			else: print('| DUPE SLIME:', id)
 
-		# Roll the layers and return the rolled file
-		fName = self.outputDir + id + '.png'
-		self.rollLayers(fName, layers, bgColor)
-		return fName
+	# Generates a slime
+	def genSlime(self, id=None):
+		# Check if an ID is given
+		if not id:
+			id, bg = self.genSlimeID()
+		else:
+			# Check if it already exists
+			if exists(self.outputDir + id + '.png'):
+				return None
+			else:
+				bg = self.decodeChar(id[1])
+
+		layers = self.genSlimeLayers(id)
+		return self.rollLayers(self.outputDir + id + '.png', layers, bg), id
 
 
 	################
@@ -244,8 +268,7 @@ class Slimes(commands.Cog):
 		self.checkUser(userID, ctx.author)
 
 		# Generate slime and get id
-		path = self.genSlime()
-		id   = path[path.rfind('/') + 1:path.rfind('.')]
+		path, id = self.genSlime()
 
 		# Add slime to the database
 		ref = self.db.collection(self.collection).document(userID)
@@ -373,11 +396,15 @@ class Slimes(commands.Cog):
 		# Check if both users are registerd
 		userID = str(ctx.author.id)
 		otherID = other[3:-1]
+
+		print(f'[{userID}]|[{otherID}] : [{slime1}]|[{slime2}]')
+
 		if userID == otherID:
 			await ctx.reply('You can\t trade with yourself.', delete_after=5)
 			return
 		if not self.checkUser(userID) or not self.checkUser(otherID):
 			await ctx.reply('You both need to be registered to trade!', delete_after=5)
+			print(f' | Trade failed between [{userID}] and [{otherID}]') # REMOVE ME
 			return
 
 		# Basic check on given id's
@@ -568,6 +595,41 @@ class Slimes(commands.Cog):
 		file = discord.File(fName)
 		await ctx.reply('Here are your favorites!', file=file)
 		os.remove(fName)
+	
+	@commands.command(brief=desc['give']['short'], description=desc['give']['long'])
+	@commands.is_owner()
+	async def give(self, ctx, other, id):
+		userID = str(ctx.author.id)
+		otherID = other[3:-1]
+
+		# Do basic checks
+		if not self.checkUser(otherID):
+			await ctx.reply(f'**{otherID}** needs to be registered.')
+			return
+		if len(id) != 8:
+			await ctx.reply('ID\'s are 8 characters.')
+			return
+		
+		# Generate slime and get id
+		path, id = self.genSlime(id)
+
+		if not path:
+			await ctx.reply(f'**{id}** isn\'t a valid ID.')
+			return
+
+		# Add slime to the database
+		ref = self.db.collection(self.collection).document(otherID)
+		ref.update({'slimes': firestore.ArrayUnion([id])})
+
+		# Send slime to user
+		file = discord.File(path)
+		await ctx.reply(f'slime#{id} was given to **{otherID}**!', file=file)
+
+		# Upload slime to firebase storage (Takes a second, better to do after response is given)
+		bucket = storage.bucket()
+		bucketPath = 'dev/' if dev else 'prod/'
+		blob = bucket.blob(f'{bucketPath}{id}.png')
+		blob.upload_from_filename(path)
 
 
 def setup(bot):

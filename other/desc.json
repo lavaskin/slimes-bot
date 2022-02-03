@@ -26,5 +26,9 @@
 	"favs": {
 		"short": "Shows all your favorites",
 		"long": "Usage: s!favs <optional: clear>\nGenerates a collage of all your favorite slimes. Given the optional clear argument (either clear or c), your favorites will instead be reset."
+	},
+	"give": {
+		"short": "[OWNER ONLY] Gifts a slime to a given user",
+		"long": "Only the bots creator can use this command. This is not used to do a one-sided trade with someone."
 	}
 }

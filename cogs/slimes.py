@@ -1,12 +1,9 @@
 import asyncio
-from fnmatch import fnmatch
 import json
 import math
 import os
 from os.path import exists
 import random
-from statistics import fmean
-from tabnanny import check
 import discord
 from discord.ext import commands
 from PIL import Image
@@ -393,18 +390,16 @@ class Slimes(commands.Cog):
 	@commands.cooldown(1, 60, commands.BucketType.user)
 	@commands.guild_only()
 	async def trade(self, ctx, other, slime1, slime2):
+		other.replace(' ', '')
 		# Check if both users are registerd
 		userID = str(ctx.author.id)
 		otherID = other[3:-1]
-
-		print(f'[{userID}]|[{otherID}] : [{slime1}]|[{slime2}]')
 
 		if userID == otherID:
 			await ctx.reply('You can\t trade with yourself.', delete_after=5)
 			return
 		if not self.checkUser(userID) or not self.checkUser(otherID):
 			await ctx.reply('You both need to be registered to trade!', delete_after=5)
-			print(f' | Trade failed between [{userID}] and [{otherID}]') # REMOVE ME
 			return
 
 		# Basic check on given id's

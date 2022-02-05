@@ -48,7 +48,7 @@ class Slimes(commands.Cog):
 		def countFiles(dir):
 			# Counts the amount of files in a directory
 			return len([f for f in os.listdir(dir) if os.path.isfile(dir + f)])
-		self.partsDir      = './res/parts/slimes/'
+		self.partsDir      = './res/parts/'
 		self.specialBgs    = countFiles(self.partsDir + 'backgrounds/special/')
 		self.regBodies     = countFiles(self.partsDir + 'bodies/regular/')
 		self.specialBodies = countFiles(self.partsDir + 'bodies/special/')

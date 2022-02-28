@@ -1,14 +1,12 @@
 import asyncio
 import json
 import math
-import os
-from os.path import exists
 import random
 import discord
+import os
+from os.path import exists
 from discord.ext import commands
-from PIL import Image
-from PIL import ImageFont
-from PIL import ImageDraw
+from PIL import Image, ImageFont, ImageDraw
 from firebase_admin import credentials, firestore, initialize_app, storage
 
 
@@ -27,7 +25,6 @@ class Slimes(commands.Cog):
 		self.bot = bot
 		self.outputDir = './output/dev/' if dev else './output/prod/'
 		self.width, self.height = 200, 200
-		# self.fontPath = open('./other/font.txt', 'r').readline()
 		self.fontPath = os.getenv('FONT_PATH', 'consola.ttf')
 
 		# Init Database
@@ -45,7 +42,7 @@ class Slimes(commands.Cog):
 				f.close()
 
 		# Load roll parameters
-		paramsFile = open('./res/params.json')
+		paramsFile = open('./other/params.json')
 		self.params = json.loads(paramsFile.read())
 		paramsFile.close()
 
@@ -497,47 +494,6 @@ class Slimes(commands.Cog):
 			elif reaction.emoji == buttons[1]:
 				await ctx.send('The trade has been declined!')
 
-	@commands.command(brief=desc['reset_self']['short'], description=desc['reset_self']['long'])
-	@commands.cooldown(1, 86400, commands.BucketType.user)
-	async def reset_self(self, ctx):
-		userID = str(ctx.author.id)
-		if not self.checkUser(userID):
-			await ctx.reply('You have nothing to reset!', delete_after=5)
-			return
-
-		# Make confirmation method
-		buttons = ['✔️', '❌']
-		msg = await ctx.reply('Are you completely sure you want to reset your account? There are no reversals.')
-		for button in buttons:
-			await msg.add_reaction(button)
-
-		# Process response
-		try:
-			reaction, _ = await self.bot.wait_for("reaction_add", check=lambda reaction, user: user == ctx.author and reaction.emoji in buttons, timeout=10.0)
-		except asyncio.TimeoutError:
-			return
-		else:
-			if reaction.emoji == buttons[0]:
-				ref = self.db.collection(self.collection).document(userID)
-
-				# Reset slimes stored on server
-				slimes = ref.get().to_dict()['slimes']
-				if slimes:
-					allSlimes = os.listdir(self.outputDir)
-					for slime in slimes:
-						for f in allSlimes:
-							if os.path.isfile(self.outputDir + f) and f[:f.rfind('.')] == slime:
-								os.remove(self.outputDir + f)
-				
-				# Reset slimes stored in firebase storage
-				# TODO
-
-				# Remove user document in database and respond
-				ref.delete()
-				await msg.edit(content='Your account has been reset.')
-			elif reaction.emoji == buttons[1]:
-				await msg.edit(content='Your account is safe!')
-
 	@commands.command(brief=desc['fav']['short'], description=desc['fav']['long'])
 	@commands.cooldown(1, 5, commands.BucketType.user)
 	async def fav(self, ctx, id=None):
@@ -646,6 +602,47 @@ class Slimes(commands.Cog):
 		bucketPath = 'dev/' if dev else 'prod/'
 		blob = bucket.blob(f'{bucketPath}{id}.png')
 		blob.upload_from_filename(path)
+
+	@commands.command(brief=desc['reset_self']['short'], description=desc['reset_self']['long'])
+	@commands.cooldown(1, 86400, commands.BucketType.user)
+	async def reset_self(self, ctx):
+		userID = str(ctx.author.id)
+		if not self.checkUser(userID):
+			await ctx.reply('You have nothing to reset!', delete_after=5)
+			return
+
+		# Make confirmation method
+		buttons = ['✔️', '❌']
+		msg = await ctx.reply('Are you completely sure you want to reset your account? There are no reversals.')
+		for button in buttons:
+			await msg.add_reaction(button)
+
+		# Process response
+		try:
+			reaction, _ = await self.bot.wait_for("reaction_add", check=lambda reaction, user: user == ctx.author and reaction.emoji in buttons, timeout=10.0)
+		except asyncio.TimeoutError:
+			return
+		else:
+			if reaction.emoji == buttons[0]:
+				ref = self.db.collection(self.collection).document(userID)
+
+				# Reset slimes stored on server
+				slimes = ref.get().to_dict()['slimes']
+				if slimes:
+					allSlimes = os.listdir(self.outputDir)
+					for slime in slimes:
+						for f in allSlimes:
+							if os.path.isfile(self.outputDir + f) and f[:f.rfind('.')] == slime:
+								os.remove(self.outputDir + f)
+				
+				# Reset slimes stored in firebase storage
+				# TODO
+
+				# Remove user document in database and respond
+				ref.delete()
+				await msg.edit(content='Your account has been reset.')
+			elif reaction.emoji == buttons[1]:
+				await msg.edit(content='Your account is safe!')
 
 
 def setup(bot):

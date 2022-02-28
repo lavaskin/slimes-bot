@@ -21,7 +21,7 @@
 	},
 	"fav": {
 		"short": "Favorites a slime",
-		"long": "Adds a given slime to your favorites list. Max of 9 slimes. Running this command on a slime you already have favorited will remove it from your favorites."
+		"long": "Usage: s!fav <optional: id>\nAdds a given slime to your favorites list. Max of 9 slimes. Running this command on a slime you already have favorited will remove it from your favorites. If no id is provided your last generated slime will be used."
 	},
 	"favs": {
 		"short": "Shows all your favorites",

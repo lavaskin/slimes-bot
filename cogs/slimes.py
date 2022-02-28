@@ -63,6 +63,19 @@ class Slimes(commands.Cog):
 	# Utility Functions #
 	#####################
 
+	# Favorites a given slime or removes it if already favorited
+	def favSlime(self, id, ref):
+		# Check if already in favorites and if favorites are maxed out
+		favs = ref.get().to_dict()['favs']
+		if id in favs:
+			ref.update({'favs': firestore.ArrayRemove([id])})
+			return f'**slime#{id}** has been removed from your favorites!'
+		elif len(favs) == 9:
+			return 'You can only have a max of 9 favorites!'
+		else:
+			ref.update({'favs': firestore.ArrayUnion([id])})
+			return f'**slime#{id}** has been added to your favorites!'
+
 	# Checks if a given slime passes the given filter
 	def passesFilter(self, filter, slime):
 		# Check if every character passes the filter
@@ -286,7 +299,7 @@ class Slimes(commands.Cog):
 	async def view(self, ctx, arg=None):
 		# Check if given id is valid (incredibly insecure)
 		if not arg or len(arg) != 8:
-			await ctx.reply('I need a valid ID you fucking idiot.', delete_after=5)
+			await ctx.reply('I need a valid ID!', delete_after=5)
 			return
 
 		path = f'{self.outputDir}{arg}.png'
@@ -516,30 +529,27 @@ class Slimes(commands.Cog):
 
 	@commands.command(brief=desc['fav']['short'], description=desc['fav']['long'])
 	@commands.cooldown(1, 5, commands.BucketType.user)
-	async def fav(self, ctx, id):
+	async def fav(self, ctx, id=None):
 		# Check user is registered
 		userID = str(ctx.author.id)
 		if not self.checkUser(userID):
 			await ctx.reply('You have no slimes!', delete_after=5)
 			return
 
-		# Check they have any slimes and if they own the one mentioned
+		# Grab users slimes
 		ref = self.db.collection(self.collection).document(userID)
 		slimes = ref.get().to_dict()['slimes']
-		if id not in slimes:
+
+		# Check if an id is provided or if they own it
+		if not id:
+			# Use most recently generated slime as id
+			id = slimes[-1]
+		elif id not in slimes:
 			await ctx.reply('You don\'t own this slime!', delete_after=5)
 			return
 
-		# Check if already in favorites and if favorites are maxed out
-		favs = ref.get().to_dict()['favs']
-		if id in favs:
-			ref.update({'favs': firestore.ArrayRemove([id])})
-			await ctx.reply(f'**slime#{id}** has been removed from your favorites!')
-		elif len(favs) == 9:
-			await ctx.reply('You can only have a max of 9 favorites!')
-		else:
-			ref.update({'favs': firestore.ArrayUnion([id])})
-			await ctx.reply(f'**slime#{id}** has been added to your favorites!')
+		res = self.favSlime(id, ref)
+		await ctx.reply(res)
 
 	@commands.command(brief=desc['favs']['short'], description=desc['favs']['long'])
 	@commands.cooldown(1, 60, commands.BucketType.user)
@@ -594,12 +604,12 @@ class Slimes(commands.Cog):
 	@commands.command(brief=desc['give']['short'], description=desc['give']['long'])
 	@commands.is_owner()
 	async def give(self, ctx, other, id):
-		userID = str(ctx.author.id)
-		otherID = other[3:-1]
+		other.replace(' ', '')
+		userID = other[3:-1]
 
 		# Do basic checks
-		if not self.checkUser(otherID):
-			await ctx.reply(f'**{otherID}** needs to be registered.')
+		if not self.checkUser(userID):
+			await ctx.reply(f'**{userID}** needs to be registered.')
 			return
 		if len(id) != 8:
 			await ctx.reply('ID\'s are 8 characters.')
@@ -613,12 +623,12 @@ class Slimes(commands.Cog):
 			return
 
 		# Add slime to the database
-		ref = self.db.collection(self.collection).document(otherID)
+		ref = self.db.collection(self.collection).document(userID)
 		ref.update({'slimes': firestore.ArrayUnion([id])})
 
 		# Send slime to user
 		file = discord.File(path)
-		await ctx.reply(f'slime#{id} was given to **{otherID}**!', file=file)
+		await ctx.reply(f'slime#{id} was given to **{userID}**!', file=file)
 
 		# Upload slime to firebase storage (Takes a second, better to do after response is given)
 		bucket = storage.bucket()

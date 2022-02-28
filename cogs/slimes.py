@@ -44,6 +44,11 @@ class Slimes(commands.Cog):
 				self.colors.append(line.replace('\n', ''))
 				f.close()
 
+		# Load roll parameters
+		paramsFile = open('./res/params.json')
+		self.params = json.loads(paramsFile.read())
+		paramsFile.close()
+
 		# Count Parts
 		def countFiles(dir):
 			# Counts the amount of files in a directory
@@ -62,6 +67,10 @@ class Slimes(commands.Cog):
 	#####################
 	# Utility Functions #
 	#####################
+
+	# Test if a given parameter randomly passes
+	def passesParam(self, param):
+		return random.randint(1, 100) < (self.params[param] * 100)
 
 	# Favorites a given slime or removes it if already favorited
 	def favSlime(self, id, ref):
@@ -189,11 +198,12 @@ class Slimes(commands.Cog):
 			layers.append((f'{self.partsDir}bodies/special/{splitID[4]}.png', True))
 		
 		# id[5] = eyes
-		layers.append((f'{self.partsDir}face/eyes/{splitID[5]}.png', True))
-
-		# id[6] = mouth
-		if splitID[6] != 'z':
-			layers.append((f'{self.partsDir}face/mouths/{splitID[6]}.png', True))
+		if splitID[5] != 'z':
+			layers.append((f'{self.partsDir}face/eyes/{splitID[5]}.png', True))
+			
+			# id[6] = mouth (Only possible if the slime has eyes)
+			if splitID[6] != 'z':
+				layers.append((f'{self.partsDir}face/mouths/{splitID[6]}.png', True))
 
 		# id[7] = hat
 		if splitID[7] != 'z':
@@ -209,39 +219,40 @@ class Slimes(commands.Cog):
 			bgColor, altColor = self.getPaintColors()
 			id = ''
 
-			# Background [50% solid color, 45% stripes, 5% special]
-			bgRoll = random.randint(1, 100)
-			if bgRoll > 95:
+			# Choose background
+			if self.passesParam('bg_special'):
 				# Apply special background
 				roll = random.randrange(0, self.specialBgs)
 				id += ('2' + self.encodeNum(roll) + 'z')
-			elif bgRoll > 50:
+			elif self.passesParam('bg_stripes'):
 				# Apply stripe layer
 				id += ('1' + self.encodeNum(bgColor) + self.encodeNum(altColor))
 			else:
 				# Solid Color
 				id += ('0' + self.encodeNum(bgColor) + 'z')
 
-			# Add slime body [90% chance of regular body, 10% special]
-			if random.randrange(0, 10):
-				roll = random.randrange(0, self.regBodies)
-				id += ('0' + self.encodeNum(roll))
-			else:
+			# Add slime body
+			if self.passesParam('bg_special'):
 				roll = random.randrange(0, self.specialBodies)
 				id += ('1' + self.encodeNum(roll))
+			else:
+				roll = random.randrange(0, self.regBodies)
+				id += ('0' + self.encodeNum(roll))
 
 			# Eyes
-			roll = random.randrange(0, self.eyes)
-			id += self.encodeNum(roll)
-
-			# Mouth [80% chance]
-			if random.randint(0, 4) != 0:
-				roll = random.randrange(0, self.mouths)
+			if self.passesParam('eyes'):
+				roll = random.randrange(0, self.eyes)
 				id += self.encodeNum(roll)
-			else: id += 'z'
 
-			# Add hat [75% chance of having a hat]
-			if random.randint(0, 3) != 0:
+				# Mouth (Can only be applied if the slime has eyes)
+				if self.passesParam('mouth'):
+					roll = random.randrange(0, self.mouths)
+					id += self.encodeNum(roll)
+				else: id += 'z'
+			else: id += 'zz' # For both eyes and mouth
+
+			# Hat
+			if self.passesParam('hat'):
 				roll = random.randrange(0, self.hats)
 				id += self.encodeNum(roll)
 			else: id += 'z'

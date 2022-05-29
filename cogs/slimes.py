@@ -365,7 +365,7 @@ class Slimes(commands.Cog):
 
 		# Only post one page if less than listing amount
 		if len(filtered) <= perPage:
-			embed = embed=discord.Embed(title=f'{username}\'s Inventory\n{siteAdd}', description=self.formatList(filtered, '\n'), color=discord.Color.green())
+			embed = embed=discord.Embed(title=f'{username}\'s Inventory', description=self.formatList(filtered, '\n'), url=siteAdd, color=discord.Color.green())
 			embed.set_footer(text=f'{len(filtered)} slime(s)...')
 			await ctx.reply(embed=embed)
 			return
@@ -382,7 +382,7 @@ class Slimes(commands.Cog):
 			else:
 				page = filtered[i * perPage:]
 			# Setup pages embed
-			embed=discord.Embed(title=f'{username}\'s Inventory\n{siteAdd}', description=self.formatList(page, '\n'), color=discord.Color.green())
+			embed=discord.Embed(title=f'{username}\'s Inventory', description=self.formatList(page, '\n'), url=siteAdd, color=discord.Color.green())
 			embed.set_footer(text=f'Slimes {(i * perPage) + 1}-{max} of {len(filtered)}...')
 			pages.append(embed)
 

@@ -305,22 +305,25 @@ class Slimes(commands.Cog):
 		blob.upload_from_filename(path)
 
 	@commands.command(brief=desc['view']['short'], description=desc['view']['long'])
-	async def view(self, ctx, arg=None):
+	async def view(self, ctx, id=None):
+		# Remove '#' from id
+		id = id.replace('#', '')
+
 		# Check if given id is valid (incredibly insecure)
-		if not arg or len(arg) != 8:
+		if not id or len(id) != 8:
 			await ctx.reply('I need a valid ID!', delete_after=5)
 			return
 
-		path = f'{self.outputDir}{arg}.png'
+		path = f'{self.outputDir}{id}.png'
 		
 		# Check if the slime exists
 		if not exists(path):
-			await ctx.reply(f'**slime#{arg}** doesn\'t exist!')
+			await ctx.reply(f'**slime#{id}** doesn\'t exist!')
 			return
 		
 		# Make embed and send it
 		file = discord.File(path)
-		embed = discord.Embed(title=f'Here\'s slime#{arg}', color=discord.Color.green())
+		embed = discord.Embed(title=f'Here\'s slime#{id}', color=discord.Color.green())
 		await ctx.reply(embed=embed, file=file)
 
 	@commands.command(brief=desc['inv']['short'], description=desc['inv']['long'])
@@ -356,9 +359,13 @@ class Slimes(commands.Cog):
 			await ctx.reply('No slimes you own match that filter!', delete_after=5)
 			return
 
+		# Create the URL to the site
+		siteAdd = self.siteLink + 'inventory/' + userID
+		siteAdd = siteAdd + '?filter=' + filter if filter else siteAdd
+
 		# Only post one page if less than listing amount
 		if len(filtered) <= perPage:
-			embed = embed=discord.Embed(title=f'{username}\'s Inventory', description=self.formatList(filtered, '\n'), color=discord.Color.green())
+			embed = embed=discord.Embed(title=f'{username}\'s Inventory\n{siteAdd}', description=self.formatList(filtered, '\n'), color=discord.Color.green())
 			embed.set_footer(text=f'{len(filtered)} slime(s)...')
 			await ctx.reply(embed=embed)
 			return
@@ -375,7 +382,7 @@ class Slimes(commands.Cog):
 			else:
 				page = filtered[i * perPage:]
 			# Setup pages embed
-			embed=discord.Embed(title=f'{username}\'s Inventory\n{self.siteLink}inventory/{userID}', description=self.formatList(page, '\n'), color=discord.Color.green())
+			embed=discord.Embed(title=f'{username}\'s Inventory\n{siteAdd}', description=self.formatList(page, '\n'), color=discord.Color.green())
 			embed.set_footer(text=f'Slimes {(i * perPage) + 1}-{max} of {len(filtered)}...')
 			pages.append(embed)
 
@@ -412,6 +419,10 @@ class Slimes(commands.Cog):
 	@commands.cooldown(1, 60, commands.BucketType.user)
 	@commands.guild_only()
 	async def trade(self, ctx, other, slime1, slime2):
+		# Remove '#' from id
+		slime1 = slime1.replace('#', '')
+		slime2 = slime2.replace('#', '')
+
 		other.replace(' ', '')
 		# Check if both users are registerd
 		userID = str(ctx.author.id)
@@ -498,6 +509,9 @@ class Slimes(commands.Cog):
 	@commands.command(brief=desc['fav']['short'], description=desc['fav']['long'])
 	@commands.cooldown(1, 5, commands.BucketType.user)
 	async def fav(self, ctx, id=None):
+		# Remove '#' from id
+		id = id.replace('#', '')
+
 		# Check user is registered
 		userID = str(ctx.author.id)
 		if not self.checkUser(userID):
@@ -573,7 +587,7 @@ class Slimes(commands.Cog):
 	@commands.is_owner()
 	async def give(self, ctx, other, id):
 		other.replace(' ', '')
-		userID = other[3:-1]
+		userID = other[2:-1]
 
 		# Do basic checks
 		if not self.checkUser(userID):

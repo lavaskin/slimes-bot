@@ -26,6 +26,7 @@ class Slimes(commands.Cog):
 		self.outputDir = './output/dev/' if dev else './output/prod/'
 		self.width, self.height = 200, 200
 		self.fontPath = os.getenv('FONT_PATH', 'consola.ttf')
+		self.siteLink = os.getenv('SITE_LINK', 'https://slimes.web.app/')
 
 		# Init Database
 		dbCred = credentials.Certificate('./other/firebase.json')
@@ -374,7 +375,7 @@ class Slimes(commands.Cog):
 			else:
 				page = filtered[i * perPage:]
 			# Setup pages embed
-			embed=discord.Embed(title=f'{username}\'s Inventory', description=self.formatList(page, '\n'), color=discord.Color.green())
+			embed=discord.Embed(title=f'{username}\'s Inventory\n{self.siteLink}inventory/{userID}', description=self.formatList(page, '\n'), color=discord.Color.green())
 			embed.set_footer(text=f'Slimes {(i * perPage) + 1}-{max} of {len(filtered)}...')
 			pages.append(embed)
 

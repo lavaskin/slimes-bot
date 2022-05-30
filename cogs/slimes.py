@@ -26,7 +26,7 @@ class Slimes(commands.Cog):
 		self.outputDir = './output/dev/' if dev else './output/prod/'
 		self.width, self.height = 200, 200
 		self.fontPath = os.getenv('FONT_PATH', 'consola.ttf')
-		self.siteLink = os.getenv('SITE_LINK', 'https://slimes.web.app/')
+		self.siteLink = os.getenv('SITE_LINK')
 
 		# Init Database
 		dbCred = credentials.Certificate('./other/firebase.json')

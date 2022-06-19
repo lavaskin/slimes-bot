@@ -15,22 +15,23 @@ descFile = open('./other/desc.json')
 desc = json.loads(descFile.read())
 
 # Get Dev Mode
-env = os.getenv('SLIME_DEV', 'True')
-dev = True if env == 'True' else False
+_env = os.getenv('SLIME_DEV', 'True')
+_dev = True if _env == 'True' else False
+_cd  = 0 if _dev else 1 # Turn off cooldowns in dev
 
 
 class Slimes(commands.Cog):
 	def __init__(self, bot):
 		# Set random class properties
 		self.bot = bot
-		self.outputDir = './output/dev/' if dev else './output/prod/'
+		self.outputDir = './output/dev/' if _dev else './output/prod/'
 		self.width, self.height = 200, 200
 		self.fontPath = os.getenv('FONT_PATH', 'consola.ttf')
 		self.siteLink = os.getenv('SITE_LINK')
 
 		# Init Database
 		dbCred = credentials.Certificate('./other/firebase.json')
-		self.collection = 'users-dev' if dev else 'users'
+		self.collection = 'users-dev' if _dev else 'users'
 		initialize_app(dbCred, {'storageBucket': os.getenv('STORAGE_BUCKET')})
 		self.db = firestore.client()
 		self.bucket = storage.bucket()
@@ -281,7 +282,7 @@ class Slimes(commands.Cog):
 	################
 
 	@commands.command(brief=desc['gen']['short'], description=desc['gen']['long'])
-	@commands.cooldown(1, 900, commands.BucketType.user)
+	@commands.cooldown(1, 900 * _cd, commands.BucketType.user)
 	async def gen(self, ctx):
 		userID = str(ctx.author.id)
 		self.checkUser(userID, ctx.author)
@@ -300,20 +301,19 @@ class Slimes(commands.Cog):
 
 		# Upload slime to firebase storage (Takes a second, better to do after response is given)
 		bucket = storage.bucket()
-		bucketPath = 'dev/' if dev else 'prod/'
+		bucketPath = 'dev/' if _dev else 'prod/'
 		blob = bucket.blob(f'{bucketPath}{id}.png')
 		blob.upload_from_filename(path)
 
 	@commands.command(brief=desc['view']['short'], description=desc['view']['long'])
 	async def view(self, ctx, id=None):
-		# Remove '#' from id
-		id = id.replace('#', '')
-
 		# Check if given id is valid (incredibly insecure)
 		if not id or len(id) != 8:
 			await ctx.reply('I need a valid ID!', delete_after=5)
 			return
 
+		# Remove '#' from id and get path
+		id = id.replace('#', '')
 		path = f'{self.outputDir}{id}.png'
 		
 		# Check if the slime exists
@@ -327,7 +327,7 @@ class Slimes(commands.Cog):
 		await ctx.reply(embed=embed, file=file)
 
 	@commands.command(brief=desc['inv']['short'], description=desc['inv']['long'])
-	@commands.cooldown(1, 60, commands.BucketType.user)
+	@commands.cooldown(1, 60 * _cd, commands.BucketType.user)
 	async def inv(self, ctx, filter=None):
 		perPage = 10
 		username = str(ctx.author)[:str(ctx.author).rfind('#')]
@@ -416,7 +416,7 @@ class Slimes(commands.Cog):
 					await msg.edit(embed=pages[cur])
 
 	@commands.command(brief=desc['trade']['short'], description=desc['trade']['long'])
-	@commands.cooldown(1, 60, commands.BucketType.user)
+	@commands.cooldown(1, 60 * _cd, commands.BucketType.user)
 	@commands.guild_only()
 	async def trade(self, ctx, other, slime1, slime2):
 		# Remove '#' from id
@@ -507,10 +507,10 @@ class Slimes(commands.Cog):
 				await ctx.send('The trade has been declined!')
 
 	@commands.command(brief=desc['fav']['short'], description=desc['fav']['long'])
-	@commands.cooldown(1, 5, commands.BucketType.user)
+	@commands.cooldown(1, 5 * _cd, commands.BucketType.user)
 	async def fav(self, ctx, id=None):
 		# Remove '#' from id
-		id = id.replace('#', '')
+		if id: id = id.replace('#', '')
 
 		# Check user is registered
 		userID = str(ctx.author.id)
@@ -534,8 +534,8 @@ class Slimes(commands.Cog):
 		await ctx.reply(res)
 
 	@commands.command(brief=desc['favs']['short'], description=desc['favs']['long'])
-	@commands.cooldown(1, 60, commands.BucketType.user)
-	async def favs(self, ctx, clear=''):
+	@commands.cooldown(1, 60 * _cd, commands.BucketType.user)
+	async def favs(self, ctx, clear=None):
 		# Check user is registered
 		userID = str(ctx.author.id)
 		if not self.checkUser(userID):
@@ -614,12 +614,12 @@ class Slimes(commands.Cog):
 
 		# Upload slime to firebase storage (Takes a second, better to do after response is given)
 		bucket = storage.bucket()
-		bucketPath = 'dev/' if dev else 'prod/'
+		bucketPath = 'dev/' if _dev else 'prod/'
 		blob = bucket.blob(f'{bucketPath}{id}.png')
 		blob.upload_from_filename(path)
 
 	@commands.command(brief=desc['reset_self']['short'], description=desc['reset_self']['long'])
-	@commands.cooldown(1, 86400, commands.BucketType.user)
+	@commands.cooldown(1, 86400 * _cd, commands.BucketType.user)
 	async def reset_self(self, ctx):
 		userID = str(ctx.author.id)
 		if not self.checkUser(userID):

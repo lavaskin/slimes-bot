@@ -10,6 +10,16 @@ from PIL import Image, ImageFont, ImageDraw
 from firebase_admin import credentials, firestore, initialize_app, storage
 
 
+# Constants
+ID_BG_VARIENT   = 0
+ID_BG_PRIMARY   = 1
+ID_BG_SECONDARY = 2
+ID_BODY_VARIENT = 3
+ID_BODY         = 4
+ID_EYES         = 5
+ID_MOUTH        = 6
+ID_HAT          = 7
+
 # Load Descriptions File
 descFile = open('./other/desc.json')
 desc = json.loads(descFile.read())
@@ -66,6 +76,47 @@ class Slimes(commands.Cog):
 	#####################
 	# Utility Functions #
 	#####################
+
+	# Given a slime ID, determines how rare it is. Returns its rank and rarity number
+	def getRarity(self, id):
+		text = 'This slimes rarity is unknown...'
+		score = 0
+
+		# Check background (solid is 0, stripes is 1 and special is 4)
+		if id[ID_BG_VARIENT] == '1': score += 1
+		elif id[ID_BG_VARIENT] == '2': score += 6
+
+		# Check if body is special
+		if id[ID_BODY_VARIENT] == '1': score += 6
+
+		# Check if the slime doesn't have eyes
+		if id[ID_EYES] == 'z': score += 8
+
+		# Check if it has a mouth
+		if id[ID_MOUTH] != 'z': score += 1
+
+		# Check if it has a hat
+		if id[ID_HAT] != 'z': score += 2
+
+		if score == 0:
+			text = 'This is an **extremely ordinary** slime!'
+		elif score < 3:
+			text = 'This is a **common** slime.'
+		elif score < 6:
+			text = 'This is a **uncommon** slime.'
+		elif score < 9:
+			text = 'This is a **rare** slime!'
+		elif score < 12:
+			text = 'This is a **pretty rare** slime!'
+		elif score < 14:
+			text = 'This is a **very rare** slime!!'
+
+		# Max score judgement
+		elif score >= 22:
+			text = 'This is an **overwhelmingly rare** slime!!!'
+
+		return text, score
+
 
 	# Test if a given parameter randomly passes
 	def passesParam(self, param):
@@ -184,29 +235,29 @@ class Slimes(commands.Cog):
 		# id[0] = background variant (0 = solid, 1 = stripes, 2 = specials)
 		# id[1] = primary background (solid color/special bg)
 		# id[2] = secondary background color (stripes)
-		if splitID[0] == 1:
-			layers.append((f'{self.partsDir}backgrounds/stripes/{splitID[2]}.png', True))
-		elif splitID[0] == 2:
-			layers.append((f'{self.partsDir}backgrounds/special/{splitID[1]}.png', False))
+		if splitID[ID_BG_VARIENT] == 1:
+			layers.append((f'{self.partsDir}backgrounds/stripes/{splitID[ID_BG_SECONDARY]}.png', True))
+		elif splitID[ID_BG_VARIENT] == 2:
+			layers.append((f'{self.partsDir}backgrounds/special/{splitID[ID_BG_PRIMARY]}.png', False))
 
 		# id[3] = body varient (0 = normal, 1 = special)
 		# id[4] = body
-		if splitID[3] == 0:
-			layers.append((f'{self.partsDir}bodies/regular/{splitID[4]}.png', True))
-		elif splitID[3] == 1:
-			layers.append((f'{self.partsDir}bodies/special/{splitID[4]}.png', True))
+		if splitID[ID_BODY_VARIENT] == 0:
+			layers.append((f'{self.partsDir}bodies/regular/{splitID[ID_BODY]}.png', True))
+		elif splitID[ID_BODY_VARIENT] == 1:
+			layers.append((f'{self.partsDir}bodies/special/{splitID[ID_BODY]}.png', True))
 		
 		# id[5] = eyes
-		if splitID[5] != 'z':
-			layers.append((f'{self.partsDir}face/eyes/{splitID[5]}.png', True))
+		if splitID[ID_EYES] != 'z':
+			layers.append((f'{self.partsDir}face/eyes/{splitID[ID_EYES]}.png', True))
 			
 			# id[6] = mouth (Only possible if the slime has eyes)
-			if splitID[6] != 'z':
-				layers.append((f'{self.partsDir}face/mouths/{splitID[6]}.png', True))
+			if splitID[ID_MOUTH] != 'z':
+				layers.append((f'{self.partsDir}face/mouths/{splitID[ID_MOUTH]}.png', True))
 
 		# id[7] = hat
-		if splitID[7] != 'z':
-			layers.append((f'{self.partsDir}hats/{splitID[7]}.png', True))
+		if splitID[ID_HAT] != 'z':
+			layers.append((f'{self.partsDir}hats/{splitID[ID_HAT]}.png', True))
 
 		return layers
 
@@ -281,9 +332,9 @@ class Slimes(commands.Cog):
 	# Bot Commands #
 	################
 
-	@commands.command(brief=desc['gen']['short'], description=desc['gen']['long'])
+	@commands.command(brief=desc['generate']['short'], description=desc['generate']['long'], aliases=['g', 'gen'])
 	@commands.cooldown(1, 900 * _cd, commands.BucketType.user)
-	async def gen(self, ctx):
+	async def generate(self, ctx):
 		userID = str(ctx.author.id)
 		self.checkUser(userID, ctx.author)
 
@@ -294,9 +345,12 @@ class Slimes(commands.Cog):
 		ref = self.db.collection(self.collection).document(userID)
 		ref.update({'slimes': firestore.ArrayUnion([id])})
 
+		# Get rarity and status message
+		rarityText, _ = self.getRarity(id)
+
 		# Make embed and send it
 		file = discord.File(path)
-		embed = discord.Embed(title=f'**{id}** was generated!', color=discord.Color.green())
+		embed = discord.Embed(title=f'Generated **{id}**', description=rarityText, color=discord.Color.green())
 		await ctx.reply(embed=embed, file=file)
 
 		# Upload slime to firebase storage (Takes a second, better to do after response is given)
@@ -305,7 +359,7 @@ class Slimes(commands.Cog):
 		blob = bucket.blob(f'{bucketPath}{id}.png')
 		blob.upload_from_filename(path)
 
-	@commands.command(brief=desc['view']['short'], description=desc['view']['long'])
+	@commands.command(brief=desc['view']['short'], description=desc['view']['long'], aliases=['v'])
 	async def view(self, ctx, id=None):
 		# Check if given id is valid (incredibly insecure)
 		if not id or len(id) != 8:
@@ -321,12 +375,11 @@ class Slimes(commands.Cog):
 		
 		# Make embed and send it
 		file = discord.File(path)
-		embed = discord.Embed(title=f'Here\'s **{id}**', color=discord.Color.green())
-		await ctx.reply(embed=embed, file=file)
+		await ctx.reply(file=file)
 
-	@commands.command(brief=desc['inv']['short'], description=desc['inv']['long'])
+	@commands.command(brief=desc['inventory']['short'], description=desc['inventory']['long'], aliases=['i', 'inv'])
 	@commands.cooldown(1, 60 * _cd, commands.BucketType.user)
-	async def inv(self, ctx, filter=None):
+	async def inventory(self, ctx, filter=None):
 		perPage = 10
 		username = str(ctx.author)[:str(ctx.author).rfind('#')]
 		userID = str(ctx.author.id)
@@ -413,12 +466,14 @@ class Slimes(commands.Cog):
 				if cur != prev:
 					await msg.edit(embed=pages[cur])
 
-	@commands.command(brief=desc['trade']['short'], description=desc['trade']['long'])
+	@commands.command(brief=desc['trade']['short'], description=desc['trade']['long'], aliases=['t'])
 	@commands.cooldown(1, 60 * _cd, commands.BucketType.user)
 	@commands.guild_only()
-	async def trade(self, ctx, other, slime1, slime2):
-		# Remove whitespace from id
-		other.replace(' ', '')
+	async def trade(self, ctx, other_person, your_slime, their_slime):
+		# Remove whitespace from id and format arguments to make sense in s!help usage
+		other = other_person.replace(' ', '')
+		slime1 = your_slime
+		slime2 = their_slime
 		
 		# Check if both users are registerd
 		userID = str(ctx.author.id)
@@ -502,9 +557,9 @@ class Slimes(commands.Cog):
 			elif reaction.emoji == buttons[1]:
 				await ctx.send('The trade has been declined!')
 
-	@commands.command(brief=desc['fav']['short'], description=desc['fav']['long'])
+	@commands.command(brief=desc['favorite']['short'], description=desc['favorite']['long'], aliases=['f', 'fav'])
 	@commands.cooldown(1, 5 * _cd, commands.BucketType.user)
-	async def fav(self, ctx, id=None):
+	async def favorite(self, ctx, id=None):
 		# Check user is registered
 		userID = str(ctx.author.id)
 		if not self.checkUser(userID):
@@ -526,9 +581,9 @@ class Slimes(commands.Cog):
 		res = self.favSlime(id, ref)
 		await ctx.reply(res)
 
-	@commands.command(brief=desc['favs']['short'], description=desc['favs']['long'])
+	@commands.command(brief=desc['favorites']['short'], description=desc['favorites']['long'], aliases=['fs', 'favs'])
 	@commands.cooldown(1, 60 * _cd, commands.BucketType.user)
-	async def favs(self, ctx, clear=None):
+	async def favorites(self, ctx, clear=None):
 		# Check user is registered
 		userID = str(ctx.author.id)
 		if not self.checkUser(userID):
@@ -603,7 +658,7 @@ class Slimes(commands.Cog):
 
 		# Send slime to user
 		file = discord.File(path)
-		await ctx.reply(f'slime#{id} was given to **{userID}**!', file=file)
+		await ctx.reply(f'**{id}** was given to **{userID}**!', file=file)
 
 		# Upload slime to firebase storage (Takes a second, better to do after response is given)
 		bucket = storage.bucket()
@@ -611,9 +666,23 @@ class Slimes(commands.Cog):
 		blob = bucket.blob(f'{bucketPath}{id}.png')
 		blob.upload_from_filename(path)
 
-	@commands.command(brief=desc['reset_self']['short'], description=desc['reset_self']['long'])
+	@commands.command(brief=desc['rarity']['short'], description=desc['rarity']['long'], aliases=['r'])
+	async def rarity(self, ctx, id):
+		# Check if given id is valid
+		if not id or len(id) != 8:
+			await ctx.reply('I need a valid ID!', delete_after=5)
+			return
+
+		# Get data
+		text, score = self.getRarity(id)
+
+		# Send embed response
+		embed = discord.Embed(title=f'{id}\' Rarity', description=text + f' (Score of {score})', color=discord.Color.green())
+		await ctx.reply(embed=embed)
+
+	@commands.command(brief=desc['reset']['short'], description=desc['reset']['long'])
 	@commands.cooldown(1, 86400 * _cd, commands.BucketType.user)
-	async def reset_self(self, ctx):
+	async def reset(self, ctx):
 		userID = str(ctx.author.id)
 		if not self.checkUser(userID):
 			await ctx.reply('You have nothing to reset!', delete_after=5)

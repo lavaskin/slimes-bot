@@ -1,21 +1,18 @@
-# slimes-bot
+# Slimes! Discord Bot
 
-**How to use**:
+
+**How to build the bot**:
+
 1. Fill out all the relevant information in a '.env' file. Use .env-example.txt as a reference.
 2. Create an /other/firebase.json file from the json Firebase gives you on their site after you initialize a firestore database.
 1. Run bot.py using python3 directly.
+1. Note that I'm not going out of my way to support forks of the project so don't ask for help on setting it up.
+
 
 **Bot Commands (Prefix: s!)**:
-- help: Lists out basic descriptions for commands.
-- gen: Generates a unique random slime. 30 minute cooldown.
-- view <slime id>: Queries the slimes and replies with an embed containing the matching one if it exists.
-- inv <optional: filter>: Shows a navigatable embed menu with reaction buttons to scroll through owned slimes. Given a filter, it will only show slimes you own that fit it.
-	- The filter type matches the slime id. It must be 8 characters long. If a '?' is used in the filter it means that part can be anything.
-		- Example: The filter '????????' functions the same as running with no filter. The filter '0??????0' will only return slimes with a 0 in the first and last slot, and whatever else in the middle.
-- trade <other user> <your slime> <their slime>: Offers a trade to a given user.
-- fav <optional: slime id>: Adds a given slime to your favorites (Max of 9). If no ID is provided, the last generated slime is used.
-- favs <optional: clear>: Creates a collage of all favorited slimes. If optional argument is given (clear/c), wipes all favorites.
-- reset_self: Completely resets your account. Mostly for testing, but maybe users want this ability?
+
+See [this description file](https://github.com/Lavaskin/slimes-bot/blob/main/other/desc.json) as I'm too lazy to maintain two lists, or use s!help on the bot.
+
 
 **Credits**
 - PhinalDestination: SlimeV2 pixel art. General testing.

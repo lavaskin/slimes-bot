@@ -1,34 +1,46 @@
 {
-	"gen": {
+	"generate": {
 		"short": "Generates a new slime",
 		"long": "Creates a unique slime and replies to the user with it. This slime is now owned by the command user!\nCooldown: 15 minutes"
 	},
+
 	"view": {
 		"short": "Shows a given slime",
-		"long": "Usage: s!view <slime id>\n\nShows the slime corresponding to the given ID."
+		"long": "Shows the slime corresponding to the given ID."
 	},
-	"inv": {
+
+	"inventory": {
 		"short": "Shows the users inventory",
-		"long": "Usage: s!inv <optional: filter>\n\nShows a navigatable embed of every slime the user owns ordered by date acquired. The filter must be 8 characters long. A '?' in the filter means anything can be in that slot.\nCooldown: 1 minute"
+		"long": "Shows a navigatable embed of every slime the user owns ordered by date acquired. The filter must be 8 characters long. A '?' in the filter means anything can be in that slot.\nCooldown: 1 minute"
 	},
+
 	"trade": {
 		"short": "Trade with other users",
-		"long": "Usage: s!trade <other user> <your slime> <their slime>.\n\nOffers a trade for their slime given yours. If the receiver reacts with a checkmark the trade completes.\nCooldown: 1 minute"
+		"long": "Offers a trade for their slime given yours. If the receiver reacts with a checkmark the trade completes.\nCooldown: 1 minute"
 	},
-	"reset_self": {
-		"short": "Completely resets your account",
-		"long": "WARNING: Only do this with 100% certainty. There are no reversals.\nWipes all your slimes from the server and resets your account.\nCooldown: 24 hours"
-	},
-	"fav": {
+
+	"favorite": {
 		"short": "Favorites a slime",
-		"long": "Usage: s!fav <optional: id>\nAdds a given slime to your favorites list. Max of 9 slimes. Running this command on a slime you already have favorited will remove it from your favorites. If no id is provided your last generated slime will be used."
+		"long": "Adds a given slime to your favorites list. Max of 9 slimes. Running this command on a slime you already have favorited will remove it from your favorites. If no id is provided your last generated slime will be used."
 	},
-	"favs": {
+
+	"favorites": {
 		"short": "Shows all your favorites",
-		"long": "Usage: s!favs <optional: clear>\nGenerates a collage of all your favorite slimes. Given the optional clear argument (either clear or c), your favorites will instead be reset."
+		"long": "Generates a collage of all your favorite slimes. Given the optional clear argument (either clear or c), your favorites will instead be reset."
 	},
+
 	"give": {
 		"short": "[OWNER ONLY] Gifts a slime to a given user",
 		"long": "Only the bots creator can use this command. This is not used to do a one-sided trade with someone."
+	},
+
+	"rarity": {
+		"short": "Shows the rarity of a slime",
+		"long": "Shows the rarity of the slime corresponding to the given ID."
+	},
+
+	"reset": {
+		"short": "Completely resets your account",
+		"long": "WARNING: Only do this with 100% certainty. There are no reversals.\nWipes all your slimes from the server and resets your account.\nCooldown: 24 hours"
 	}
 }

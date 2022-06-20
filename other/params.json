@@ -1,7 +1,7 @@
 {
 	"bg_special": 0.05,
-	"bg_stripes": 0.45,
-	"body_special": 0.1,
+	"bg_stripes": 0.40,
+	"body_special": 0.10,
 	"eyes": 0.97,
 	"mouth": 0.75,
 	"hat": 0.75

@@ -103,7 +103,7 @@ class Slimes(commands.Cog):
 		elif score < 3:
 			text = 'This is a **common** slime.'
 		elif score < 6:
-			text = 'This is a **uncommon** slime.'
+			text = 'This is an **uncommon** slime.'
 		elif score < 9:
 			text = 'This is a **rare** slime!'
 		elif score < 12:

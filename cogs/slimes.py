@@ -296,7 +296,7 @@ class Slimes(commands.Cog):
 
 		# Make embed and send it
 		file = discord.File(path)
-		embed = discord.Embed(title=f'slime#{id} was generated!', color=discord.Color.green())
+		embed = discord.Embed(title=f'**{id}** was generated!', color=discord.Color.green())
 		await ctx.reply(embed=embed, file=file)
 
 		# Upload slime to firebase storage (Takes a second, better to do after response is given)
@@ -312,8 +312,6 @@ class Slimes(commands.Cog):
 			await ctx.reply('I need a valid ID!', delete_after=5)
 			return
 
-		# Remove '#' from id and get path
-		id = id.replace('#', '')
 		path = f'{self.outputDir}{id}.png'
 		
 		# Check if the slime exists
@@ -323,7 +321,7 @@ class Slimes(commands.Cog):
 		
 		# Make embed and send it
 		file = discord.File(path)
-		embed = discord.Embed(title=f'Here\'s slime#{id}', color=discord.Color.green())
+		embed = discord.Embed(title=f'Here\'s **{id}**', color=discord.Color.green())
 		await ctx.reply(embed=embed, file=file)
 
 	@commands.command(brief=desc['inv']['short'], description=desc['inv']['long'])
@@ -419,11 +417,9 @@ class Slimes(commands.Cog):
 	@commands.cooldown(1, 60 * _cd, commands.BucketType.user)
 	@commands.guild_only()
 	async def trade(self, ctx, other, slime1, slime2):
-		# Remove '#' from id
-		slime1 = slime1.replace('#', '')
-		slime2 = slime2.replace('#', '')
-
+		# Remove whitespace from id
 		other.replace(' ', '')
+		
 		# Check if both users are registerd
 		userID = str(ctx.author.id)
 		otherID = other[3:-1]
@@ -509,9 +505,6 @@ class Slimes(commands.Cog):
 	@commands.command(brief=desc['fav']['short'], description=desc['fav']['long'])
 	@commands.cooldown(1, 5 * _cd, commands.BucketType.user)
 	async def fav(self, ctx, id=None):
-		# Remove '#' from id
-		if id: id = id.replace('#', '')
-
 		# Check user is registered
 		userID = str(ctx.author.id)
 		if not self.checkUser(userID):

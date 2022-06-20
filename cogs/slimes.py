@@ -128,12 +128,12 @@ class Slimes(commands.Cog):
 		favs = ref.get().to_dict()['favs']
 		if id in favs:
 			ref.update({'favs': firestore.ArrayRemove([id])})
-			return f'**slime#{id}** has been removed from your favorites!'
+			return f'**{id}** has been removed from your favorites!'
 		elif len(favs) == 9:
 			return 'You can only have a max of 9 favorites!'
 		else:
 			ref.update({'favs': firestore.ArrayUnion([id])})
-			return f'**slime#{id}** has been added to your favorites!'
+			return f'**{id}** has been added to your favorites!'
 
 	# Checks if a given slime passes the given filter
 	def passesFilter(self, filter, slime):
@@ -370,7 +370,7 @@ class Slimes(commands.Cog):
 		
 		# Check if the slime exists
 		if not exists(path):
-			await ctx.reply(f'**slime#{id}** doesn\'t exist!')
+			await ctx.reply(f'**{id}** doesn\'t exist!')
 			return
 		
 		# Make embed and send it
@@ -678,6 +678,32 @@ class Slimes(commands.Cog):
 
 		# Send embed response
 		embed = discord.Embed(title=f'{id}\' Rarity', description=text + f' (Score of {score})', color=discord.Color.green())
+		await ctx.reply(embed=embed)
+
+	@commands.command(brief=desc['top']['short'], description=desc['top']['long'])
+	@commands.cooldown(1, 60 * _cd, commands.BucketType.user)
+	async def top(self, ctx, num=10):
+		# Check user is registered
+		userID = str(ctx.author.id)
+		if not self.checkUser(userID):
+			await ctx.reply('You have no slimes!', delete_after=5)
+			return
+
+		if num > 20:
+			await ctx.reply('You can only check your top 20!', delete_after=5)
+			return
+
+		# Get data
+		ref = self.db.collection(self.collection).document(userID)
+		slimes = ref.get().to_dict()['slimes']
+		rarities = [(self.getRarity(slime)[1], slime) for slime in slimes]
+		rarities.sort(reverse=True)
+		rarities = rarities[:num]
+
+		# Send embed response
+		embed = discord.Embed(title=f'{ctx.author.name}\'s Top {num} Slimes', color=discord.Color.green())
+		for i, (score, slime) in enumerate(rarities):
+			embed.add_field(name=f'#{i + 1}', value=f'{slime} (Score of {score})')
 		await ctx.reply(embed=embed)
 
 	@commands.command(brief=desc['reset']['short'], description=desc['reset']['long'])

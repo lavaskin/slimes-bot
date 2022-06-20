@@ -44,6 +44,11 @@
 		"long": "Shows the given number of highest rarity slimes the user owns. If no number is provided, it will show the top 10."
 	},
 
+	"rarities": {
+		"short": "Lists slime rarities",
+		"long": "Lists all the possible rarities a slime can generate as."
+	},
+
 	"reset": {
 		"short": "Completely resets your account",
 		"long": "WARNING: Only do this with 100% certainty. There are no reversals.\nWipes all your slimes from the server and resets your account.\nCooldown: 24 hours"

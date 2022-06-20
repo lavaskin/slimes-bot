@@ -87,16 +87,16 @@ class Slimes(commands.Cog):
 		elif id[ID_BG_VARIENT] == '2': score += 6
 
 		# Check if body is special
-		if id[ID_BODY_VARIENT] == '1': score += 6
+		if id[ID_BODY_VARIENT] == '1': score += 8
 
 		# Check if the slime doesn't have eyes
-		if id[ID_EYES] == 'z': score += 8
+		if id[ID_EYES] == 'z': score += 9
 
 		# Check if it has a mouth
 		if id[ID_MOUTH] != 'z': score += 1
 
 		# Check if it has a hat
-		if id[ID_HAT] != 'z': score += 2
+		if id[ID_HAT] != 'z': score += 1
 
 		if score == 0:
 			text = 'This is an **extremely ordinary** slime!'
@@ -108,11 +108,9 @@ class Slimes(commands.Cog):
 			text = 'This is a **rare** slime!'
 		elif score < 12:
 			text = 'This is a **pretty rare** slime!'
-		elif score < 14:
+		elif score < 20:
 			text = 'This is a **very rare** slime!!'
-
-		# Max score judgement
-		elif score >= 22:
+		elif score >= 20:
 			text = 'This is an **overwhelmingly rare** slime!!!'
 
 		return text, score
@@ -678,6 +676,21 @@ class Slimes(commands.Cog):
 
 		# Send embed response
 		embed = discord.Embed(title=f'{id}\' Rarity', description=text + f' (Score of {score})', color=discord.Color.green())
+		await ctx.reply(embed=embed)
+
+	@commands.command(brief=desc['rarities']['short'], description=desc['rarities']['long'])
+	async def rarities(self, ctx):
+		rarities = [
+			'Extremely Ordinary',
+			'Common',
+			'Uncommon',
+			'Rare',
+			'Pretty Rare',
+			'Very Rare',
+			':sparkles: Overwhelmingly Rare',
+		]
+
+		embed = discord.Embed(title='Slime bRarities', description='\n'.join(rarities), color=discord.Color.green())
 		await ctx.reply(embed=embed)
 
 	@commands.command(brief=desc['top']['short'], description=desc['top']['long'])

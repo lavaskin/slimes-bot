@@ -401,7 +401,7 @@ class Slimes(commands.Cog):
 		for i in range(int(count)):
 			slimes.append(self.genSlime())
 
-		# Add slime to the database, and subtract coins
+		# Add slime to the database
 		for slime in slimes:
 			ref.update({'slimes': firestore.ArrayUnion([slime[1]])})
 
@@ -419,8 +419,8 @@ class Slimes(commands.Cog):
 
 			# Make embed and send it
 			file = discord.File(slime[0])
-			embed = discord.Embed(title=f'Generated **{slime[1]}**', description=rarityText + balance, file=file, color=discord.Color.green())
-			await ctx.reply(embed=embed)
+			embed = discord.Embed(title=f'Generated **{slime[1]}**', description=rarityText + balance, color=discord.Color.green())
+			await ctx.reply(embed=embed, file=file)
 		
 		# Multiple slimes response
 		else:

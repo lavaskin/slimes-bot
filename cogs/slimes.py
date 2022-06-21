@@ -438,7 +438,7 @@ class Slimes(commands.Cog):
 		bucket = storage.bucket()
 		bucketPath = 'dev/' if _dev else 'prod/'
 		for slime in slimes:
-			blob = bucket.blob(f'{bucketPath}{id}.png')
+			blob = bucket.blob(f'{bucketPath}{slime[1]}.png')
 			blob.upload_from_filename(slime[0])
 
 	@commands.command(brief=desc['view']['short'], description=desc['view']['long'], aliases=['v'])

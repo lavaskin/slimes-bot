@@ -391,9 +391,14 @@ class Slimes(commands.Cog):
 		ref = self.db.collection(self.collection).document(userID)
 
 		# Check if user has enough coins
-		coins = ref.get().to_dict()['coins']
-		if coins < SLIME_PRICE * count:
-			await ctx.reply(f'You need {SLIME_PRICE * count - coins} more coins, Try *s!claim*', delete_after=5)
+		try:
+			coins = ref.get().to_dict()['coins']
+			if coins < SLIME_PRICE * count:
+				await ctx.reply(f'You need {SLIME_PRICE * count - coins} more coins, Try *s!claim*', delete_after=5)
+				return
+		except KeyError:
+			# For if the user is an old account where the coins attribute doesn't exist
+			await ctx.reply(f'You need {SLIME_PRICE * count} more coins, Try *s!claim*', delete_after=5)
 			return
 
 		# Generate slimes

@@ -10,7 +10,7 @@ from PIL import Image, ImageFont, ImageDraw
 from firebase_admin import credentials, firestore, initialize_app, storage
 
 
-# Constants
+# ID Constants
 ID_BG_VARIENT   = 0
 ID_BG_PRIMARY   = 1
 ID_BG_SECONDARY = 2
@@ -19,6 +19,8 @@ ID_BODY         = 4
 ID_EYES         = 5
 ID_MOUTH        = 6
 ID_HAT          = 7
+# Shop Constants
+SLIME_PRICE = 10
 
 # Load Descriptions File
 descFile = open('./other/desc.json')
@@ -111,7 +113,7 @@ class Slimes(commands.Cog):
 		elif score < 20:
 			text = 'This is a **very rare** slime!!'
 		elif score >= 20:
-			text = 'This is an **overwhelmingly rare** slime!!!'
+			text = 'This is an :sparkles:**overwhelmingly rare** slime!!!'
 
 		return text, score
 
@@ -156,7 +158,7 @@ class Slimes(commands.Cog):
 		if not ref.get().exists:
 			if not author: return False
 			# Make document
-			data = {'tag': str(author), 'slimes': [], 'favs': []}
+			data = {'tag': str(author), 'slimes': [], 'favs': [], 'coins': 100}
 			ref.set(data)
 			return False
 		else:
@@ -218,6 +220,33 @@ class Slimes(commands.Cog):
 		# Save the image/close
 		final.save(fName)
 		final.close()
+		return fName
+
+	# Makes a 3x3 grid of slimes and returns the path to the output image
+	def makeCollage(self, userID, slimes):
+		numFavs = len(slimes)
+		font = ImageFont.truetype(self.fontPath, 20)
+		fontLen,  _ = font.getsize('#' + slimes[0])
+		width = (3 * self.width) if numFavs > 2 else numFavs * self.width
+		height = math.ceil(numFavs / 3) * self.height
+		n = 0
+		combined = Image.new(mode='RGBA', size=(width, height), color=(0, 0, 0, 0))
+		draw = ImageDraw.Draw(combined)
+		fName = f'{self.outputDir}{random.randint(100000, 999999)}_{userID}.png'
+
+		for y in range(0, height, self.height):
+			for x in range(0, width, self.width):
+				if n < numFavs:
+					img = Image.open(f'{self.outputDir}{slimes[n]}.png')
+					combined.paste(img, (x, y))
+					draw.text(((x + self.width) - fontLen, y), f"#{slimes[n]}", (0, 0, 0), font=font)
+					n += 1
+				else:
+					break
+		
+		# Finish up
+		combined.save(fName)
+		combined.close()
 		return fName
 
 
@@ -330,32 +359,87 @@ class Slimes(commands.Cog):
 	# Bot Commands #
 	################
 
-	@commands.command(brief=desc['generate']['short'], description=desc['generate']['long'], aliases=['g', 'gen'])
-	@commands.cooldown(1, 900 * _cd, commands.BucketType.user)
-	async def generate(self, ctx):
+	@commands.command(brief=desc['claim']['short'], description=desc['claim']['long'], aliases=['c', 'coins', 'daily'])
+	@commands.cooldown(1, 3200 * _cd, commands.BucketType.user)
+	async def claim(self, ctx):
+		# Check if the user is registered
 		userID = str(ctx.author.id)
 		self.checkUser(userID, ctx.author)
 
-		# Generate slime and get id
-		path, id = self.genSlime()
+		payout = 40
+		payout += random.randint(-SLIME_PRICE, SLIME_PRICE)
 
-		# Add slime to the database
 		ref = self.db.collection(self.collection).document(userID)
-		ref.update({'slimes': firestore.ArrayUnion([id])})
+		ref.update({'coins': firestore.Increment(payout)})
+		coins = ref.get().to_dict()['coins']
 
-		# Get rarity and status message
-		rarityText, _ = self.getRarity(id)
+		await ctx.reply(f'You collected {payout} coins! You now have {coins} coins.')
+		return True
 
-		# Make embed and send it
-		file = discord.File(path)
-		embed = discord.Embed(title=f'Generated **{id}**', description=rarityText, color=discord.Color.green())
-		await ctx.reply(embed=embed, file=file)
+	@commands.command(brief=desc['generate']['short'], description=desc['generate']['long'], aliases=['g', 'gen'])
+	@commands.cooldown(1, 30 * _cd, commands.BucketType.user)
+	async def generate(self, ctx, count=1):
+		userID = str(ctx.author.id)
+		self.checkUser(userID, ctx.author)
 
-		# Upload slime to firebase storage (Takes a second, better to do after response is given)
+		# Check if count is between 1 and 9
+		if int(count) < 1 or int(count) > 9:
+			await ctx.reply('You can only generate between 1 and 9 slimes at a time.', delete_after=5)
+			return
+
+		# Get user
+		ref = self.db.collection(self.collection).document(userID)
+
+		# Check if user has enough coins
+		coins = ref.get().to_dict()['coins']
+		if coins < SLIME_PRICE * count:
+			await ctx.reply(f'You need {SLIME_PRICE * count - coins} more coins, Try *s!claim*', delete_after=5)
+			return
+
+		# Generate slimes
+		slimes = []
+		for i in range(int(count)):
+			slimes.append(self.genSlime())
+
+		# Add slime to the database, and subtract coins
+		for slime in slimes:
+			ref.update({'slimes': firestore.ArrayUnion([slime[1]])})
+
+		# Update balance
+		ref.update({'coins': firestore.Increment(-SLIME_PRICE * count)})
+		balance = f':coin: *{coins - SLIME_PRICE * count} left...*'
+
+		# A single slime response
+		if count == 1:
+			slime = slimes[0]
+
+			# Get rarity text
+			rarityText, _ = self.getRarity(slime[1])
+			rarityText += '\n\n'
+
+			# Make embed and send it
+			file = discord.File(slime[0])
+			embed = discord.Embed(title=f'Generated **{slime[1]}**', description=rarityText + balance, file=file, color=discord.Color.green())
+			await ctx.reply(embed=embed)
+		
+		# Multiple slimes response
+		else:
+			# Make collage of generated slimes
+			slimeIDs = [id for _, id in slimes]
+			collage = self.makeCollage(userID, slimeIDs)
+
+			# Make embed and send it
+			file = discord.File(collage)
+			embed = discord.Embed(title=f'Generated {count} slimes', description=balance, color=discord.Color.green())
+			await ctx.reply(embed=embed, file=file)
+			os.remove(collage)
+
+		# Upload slimes to firebase storage (Takes a second, better to do after response is given)
 		bucket = storage.bucket()
 		bucketPath = 'dev/' if _dev else 'prod/'
-		blob = bucket.blob(f'{bucketPath}{id}.png')
-		blob.upload_from_filename(path)
+		for slime in slimes:
+			blob = bucket.blob(f'{bucketPath}{id}.png')
+			blob.upload_from_filename(slime[0])
 
 	@commands.command(brief=desc['view']['short'], description=desc['view']['long'], aliases=['v'])
 	async def view(self, ctx, id=None):
@@ -601,33 +685,10 @@ class Slimes(commands.Cog):
 			await ctx.reply('Your favorites were reset.')
 			return
 
-		# Make collage (this is awful)
-		numFavs = len(favs)
-		font = ImageFont.truetype(self.fontPath, 20)
-		fontLen,  _ = font.getsize('#' + favs[0])
-		width = (3 * self.width) if numFavs > 2 else numFavs * self.width
-		height = math.ceil(numFavs / 3) * self.height
-		n = 0
-		combined = Image.new(mode='RGBA', size=(width, height), color=(0, 0, 0, 0))
-		draw = ImageDraw.Draw(combined)
-		fName = f'{self.outputDir}favs_{userID}.png'
-
-		for y in range(0, height, self.height):
-			for x in range(0, width, self.width):
-				if n < numFavs:
-					img = Image.open(f'{self.outputDir}{favs[n]}.png')
-					combined.paste(img, (x, y))
-					draw.text(((x + self.width) - fontLen, y), f"#{favs[n]}", (0, 0, 0), font=font)
-					n += 1
-				else:
-					break
-		
-		# Finish up
-		combined.save(fName)
-		combined.close()
-		file = discord.File(fName)
+		collage = self.makeCollage(userID, favs)
+		file = discord.File(collage)
 		await ctx.reply('Here are your favorites!', file=file)
-		os.remove(fName)
+		os.remove(collage)
 	
 	@commands.command(brief=desc['give']['short'], description=desc['give']['long'])
 	@commands.is_owner()

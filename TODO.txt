@@ -1,6 +1,0 @@
-=TODO's=
-- Create custom help command.
-	- Default command is restrictive in its formatting and looks bad.
-- Make favorites appear at the top of the inventory list
-- Make it possible for specific hats to go behind the slime body layer
-- Remove slime files from firebase/storage when s!reset_self is used

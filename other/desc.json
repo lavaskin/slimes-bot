@@ -1,7 +1,12 @@
 {
+	"claim": {
+		"short":"Claims hourly coins",
+		"long":"Lets you claim ~40 coins every hour to use in slime generation.\nCooldown: 1 hour"
+	},
+
 	"generate": {
 		"short": "Generates a new slime",
-		"long": "Creates a unique slime and replies to the user with it. This slime is now owned by the command user!\nCooldown: 15 minutes"
+		"long": "Creates a unique slime and replies to the user with it. This slime is now owned by the command user!\nCost: 10 coins\nCooldown: 30 seconds"
 	},
 
 	"view": {
@@ -21,7 +26,7 @@
 
 	"favorite": {
 		"short": "Favorites a slime",
-		"long": "Adds a given slime to your favorites list. Max of 9 slimes. Running this command on a slime you already have favorited will remove it from your favorites. If no id is provided your last generated slime will be used."
+		"long": "Adds a given slime to your favorites list. Max of 9 slimes. Running this command on a slime you already have favorited will remove it from your favorites. If no id is provided your last generated slime will be used.nCooldown: 5 seconds"
 	},
 
 	"favorites": {
@@ -41,7 +46,7 @@
 
 	"top": {
 		"short": "Shows the users top slimes",
-		"long": "Shows the given number of highest rarity slimes the user owns. If no number is provided, it will show the top 10."
+		"long": "Shows the given number of highest rarity slimes the user owns. If no number is provided, it will show the top 10.\nCooldown: 1 minute"
 	},
 
 	"rarities": {

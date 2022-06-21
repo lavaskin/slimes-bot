@@ -54,6 +54,21 @@
 		"long": "Lists all the possible rarities a slime can generate as."
 	},
 
+	"sell": {
+		"short": "Sells a given slime",
+		"long": "Sells a given slime for an amount relating to its rarity.\nCooldown: 5 seconds"
+	},
+
+	"balance": {
+		"short": "Shows the users balance",
+		"long": "Shows the users balance."
+	},
+
+	"profile": {
+		"short": "Shows the users profile",
+		"long": "Shows the users profile, including basic information as well as random statistics.\nCooldown: 1 minute"
+	},
+
 	"reset": {
 		"short": "Completely resets your account",
 		"long": "WARNING: Only do this with 100% certainty. There are no reversals.\nWipes all your slimes from the server and resets your account.\nCooldown: 24 hours"

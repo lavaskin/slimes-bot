@@ -1,3 +1,4 @@
+from ast import alias
 import asyncio
 import json
 import math
@@ -20,7 +21,8 @@ ID_EYES         = 5
 ID_MOUTH        = 6
 ID_HAT          = 7
 # Shop Constants
-SLIME_PRICE = 10
+SLIME_PRICE   = 10
+SELLING_RATIO = 1 # Amount to remove from price when selling
 
 # Load Descriptions File
 descFile = open('./other/desc.json')
@@ -158,7 +160,7 @@ class Slimes(commands.Cog):
 		if not ref.get().exists:
 			if not author: return False
 			# Make document
-			data = {'tag': str(author), 'slimes': [], 'favs': [], 'coins': 100}
+			data = {'tag': str(author), 'slimes': [], 'favs': [], 'coins': 100, 'pfp': '', 'selling': []}
 			ref.set(data)
 			return False
 		else:
@@ -359,7 +361,7 @@ class Slimes(commands.Cog):
 	# Bot Commands #
 	################
 
-	@commands.command(brief=desc['claim']['short'], description=desc['claim']['long'], aliases=['c', 'coins', 'daily'])
+	@commands.command(brief=desc['claim']['short'], description=desc['claim']['long'], aliases=['c', 'daily'])
 	@commands.cooldown(1, 3200 * _cd, commands.BucketType.user)
 	async def claim(self, ctx):
 		# Check if the user is registered
@@ -394,11 +396,11 @@ class Slimes(commands.Cog):
 		try:
 			coins = ref.get().to_dict()['coins']
 			if coins < SLIME_PRICE * count:
-				await ctx.reply(f'You need {SLIME_PRICE * count - coins} more coins, Try *s!claim*', delete_after=5)
+				await ctx.reply(f'You need {SLIME_PRICE * count - coins} more coins, Try **s!claim**', delete_after=10)
 				return
 		except KeyError:
 			# For if the user is an old account where the coins attribute doesn't exist
-			await ctx.reply(f'You need {SLIME_PRICE * count} more coins, Try *s!claim*', delete_after=5)
+			await ctx.reply(f'You need {SLIME_PRICE * count} more coins, Try **s!claim**', delete_after=10)
 			return
 
 		# Generate slimes
@@ -785,9 +787,138 @@ class Slimes(commands.Cog):
 			embed.add_field(name=f'#{i + 1}', value=f'{slime} (Score of {score})')
 		await ctx.reply(embed=embed)
 
+	@commands.command(brief=desc['sell']['short'], description=desc['sell']['long'], aliases=['s'])
+	@commands.cooldown(1, 5 * _cd, commands.BucketType.user)
+	async def sell(self, ctx, id=None):
+		# Check user is registered
+		userID = str(ctx.author.id)
+		if not self.checkUser(userID):
+			await ctx.reply('You have no slimes to sell!', delete_after=5)
+			return
+
+		# Check if id is valid
+		if id and len(id) != 8:
+			await ctx.reply('I need a valid ID!', delete_after=5)
+			return
+
+		# Get users slimes
+		ref = self.db.collection(self.collection).document(userID)
+		slimes = ref.get().to_dict()['slimes']
+
+		# Check if user has slimes
+		if not slimes:
+			await ctx.reply('You have no slimes to sell!', delete_after=5)
+			return
+
+		# Select most recent slime if no id is given
+		if not id: id = slimes[-1]
+
+		# Check if they own it
+		if id not in slimes:
+			await ctx.reply('You don\'t own that slime!', delete_after=5)
+			return
+
+		# Get slimes value
+		value = math.ceil(self.getRarity(id)[1] * SELLING_RATIO)
+		if value == 0: value = 1 # pity value
+
+		# Check if its favorited
+		favs = ref.get().to_dict()['favs']
+		if id in favs:
+			await ctx.reply('You can\'t trade favorited slimes!', delete_after=5)
+			return
+
+		# Build response
+		buttons = ['✔️', '❌']
+		path = f'{self.outputDir}{id}.png'
+		file = discord.File(path)
+		msg = await ctx.reply(f'Are you sure you want to sell **{id}** for {value} coin(s)?', file=file)
+		for button in buttons: await msg.add_reaction(button)
+
+		# Process response
+		try:
+			response, _ = await self.bot.wait_for('reaction_add', check=lambda reaction, user: user == ctx.author and reaction.emoji in buttons, timeout=10.0)
+		except asyncio.TimeoutError:
+			return
+		else:
+			# Sell the slime
+			if response.emoji == buttons[0]:
+				ref.update({'slimes': firestore.ArrayRemove([id])})
+				ref.update({'coins': firestore.Increment(value)})
+				await msg.edit(content=f'**{id}** was sold for {value} coin(s)!')
+
+				# Remove the image from the server
+				os.remove(path)
+
+			# Don't sell
+			elif response.emoji == buttons[1]:
+				await msg.edit(content='You turned away the offer.')
+
+	@commands.command(brief=desc['balance']['short'], description=desc['balance']['long'], aliases=['b', 'bal', 'coins', 'wallet'])
+	async def balance(self, ctx):
+		# Check user is registered
+		userID = str(ctx.author.id)
+		if not self.checkUser(userID):
+			await ctx.reply('You have no slimes!', delete_after=5)
+			return
+		
+		# Get users coins
+		coins = 0
+		try:
+			ref = self.db.collection(self.collection).document(userID)
+			coins = ref.get().to_dict()['coins']
+		except KeyError:
+			ref.update({'coins': firestore.Increment(0)}) # Set users coins to 0 if they don't have the key in the db
+		
+		await ctx.reply(f'You have {coins} coin(s), that\'s worth like {round(coins / SLIME_PRICE, 1)} slime(s)!')
+
+
+	@commands.command(brief=desc['profile']['short'], description=desc['profile']['long'], aliases=['p', 'me'])
+	@commands.cooldown(1, 60 * _cd, commands.BucketType.user)
+	async def profile(self, ctx):
+		# Check user is registered
+		userID = str(ctx.author.id)
+		if not self.checkUser(userID, ctx.author):
+			await ctx.reply('You have no slimes!', delete_after=5)
+			return
+		
+		# Get user data
+		ref = self.db.collection(self.collection).document(userID)
+		slimes = ref.get().to_dict()['slimes']
+		coins = ref.get().to_dict()['coins']
+		favs = ref.get().to_dict()['favs']
+
+		# Loop through slimes to gather statistics
+		totalValue = coins
+		averageRarity = 0
+		highestRarity = ('', 0)
+
+		for slime in slimes:
+			rarity = self.getRarity(slime)[1]
+			if rarity > highestRarity[1]: highestRarity = (slime, rarity)
+			averageRarity += rarity
+			totalValue += rarity * SELLING_RATIO
+
+		averageRarity /= len(slimes)
+		averageRarity = round(averageRarity, 1)
+
+		# Update tag in db
+		ref.update({'tag': str(ctx.author)})
+
+		# Build response
+		embed = discord.Embed(title=f'{ctx.author.name}\'s Profile', color=discord.Color.green())
+		embed.add_field(name='Total Slimes', value=f'{len(slimes)}')
+		embed.add_field(name='Coins', value=f'{coins}')
+		embed.add_field(name='Number of Favorites', value=f'{len(favs)}')
+		embed.add_field(name='Total Value', value=f'{math.ceil(totalValue)} :coin:')
+		embed.add_field(name='Average Rarity', value=f'{averageRarity}')
+		embed.add_field(name='Rarest Slime', value=f'{highestRarity[0]} ({highestRarity[1]})')
+		await ctx.reply(embed=embed)
+
 	@commands.command(brief=desc['reset']['short'], description=desc['reset']['long'])
 	@commands.cooldown(1, 86400 * _cd, commands.BucketType.user)
 	async def reset(self, ctx):
+		# Check user is registered
 		userID = str(ctx.author.id)
 		if not self.checkUser(userID):
 			await ctx.reply('You have nothing to reset!', delete_after=5)

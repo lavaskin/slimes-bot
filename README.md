@@ -1,4 +1,4 @@
-# Slimes! Discord Bot
+# [Slimes! Discord Bot](https://slimes.lavask.in)
 
 A discord bot where you can generate, trade and collect uniquely generated slimes! \
 The bot has an econemy system, use s!claim to claim coins every hour and s!generate to create a slime!

@@ -10,7 +10,7 @@ The bot has an econemy system, use s!claim to claim coins every hour and s!gener
 1. Note that I'm not going out of my way to support forks of the project so don't ask for help on setting it up.
 
 ### **Bot Commands (Prefix: s!)**:
-See [this description file](https://github.com/Lavaskin/slimes-bot/blob/main/other/desc.json) as I'm too lazy to maintain two lists, or use s!help on the bot.
+See [this description file](https://github.com/Lavaskin/slimes-bot/blob/main/other/commands.json) as I'm too lazy to maintain two lists, or use s!help on the bot.
 
 ### **TODO**
 - Create custom help command.

@@ -1,7 +1,5 @@
 # Mass produces slimes given a command-line argument
 # I'm just copy/pasting the generation code from the slimes class, may be out of date
-
-
 import random
 import sys
 from PIL import Image

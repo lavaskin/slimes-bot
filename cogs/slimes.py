@@ -25,7 +25,7 @@ SLIME_PRICE   = 10
 SELLING_RATIO = 1 # Amount to remove from price when selling
 
 # Load Descriptions File
-descFile = open('./other/desc.json')
+descFile = open('./other/commands.json')
 desc = json.loads(descFile.read())
 
 # Get Dev Mode
@@ -361,8 +361,8 @@ class Slimes(commands.Cog):
 	# Bot Commands #
 	################
 
-	@commands.command(brief=desc['claim']['short'], description=desc['claim']['long'], aliases=['c', 'daily'])
-	@commands.cooldown(1, 3200 * _cd, commands.BucketType.user)
+	@commands.command(brief=desc['claim']['short'], description=desc['claim']['long'], aliases=desc['claim']['alias'])
+	@commands.cooldown(1, desc['claim']['cd'] * _cd, commands.BucketType.user)
 	async def claim(self, ctx):
 		# Check if the user is registered
 		userID = str(ctx.author.id)
@@ -378,8 +378,8 @@ class Slimes(commands.Cog):
 		await ctx.reply(f'You collected {payout} coins! You now have {coins} coins.')
 		return True
 
-	@commands.command(brief=desc['generate']['short'], description=desc['generate']['long'], aliases=['g', 'gen'])
-	@commands.cooldown(1, 30 * _cd, commands.BucketType.user)
+	@commands.command(brief=desc['generate']['short'], description=desc['generate']['long'], aliases=desc['generate']['alias'])
+	@commands.cooldown(1, desc['generate']['cd'] * _cd, commands.BucketType.user)
 	async def generate(self, ctx, count=1):
 		userID = str(ctx.author.id)
 		self.checkUser(userID, ctx.author)
@@ -448,7 +448,8 @@ class Slimes(commands.Cog):
 			blob = bucket.blob(f'{bucketPath}{slime[1]}.png')
 			blob.upload_from_filename(slime[0])
 
-	@commands.command(brief=desc['view']['short'], description=desc['view']['long'], aliases=['v'])
+	@commands.command(brief=desc['view']['short'], description=desc['view']['long'], aliases=desc['view']['alias'])
+	@commands.cooldown(1, desc['view']['cd'] * _cd, commands.BucketType.user)
 	async def view(self, ctx, id=None):
 		# Check if given id is valid (incredibly insecure)
 		if not id or len(id) != 8:
@@ -466,8 +467,8 @@ class Slimes(commands.Cog):
 		file = discord.File(path)
 		await ctx.reply(file=file)
 
-	@commands.command(brief=desc['inventory']['short'], description=desc['inventory']['long'], aliases=['i', 'inv'])
-	@commands.cooldown(1, 60 * _cd, commands.BucketType.user)
+	@commands.command(brief=desc['inventory']['short'], description=desc['inventory']['long'], aliases=desc['inventory']['alias'])
+	@commands.cooldown(1, desc['inventory']['cd'] * _cd, commands.BucketType.user)
 	async def inventory(self, ctx, filter=None):
 		perPage = 10
 		username = str(ctx.author)[:str(ctx.author).rfind('#')]
@@ -555,8 +556,8 @@ class Slimes(commands.Cog):
 				if cur != prev:
 					await msg.edit(embed=pages[cur])
 
-	@commands.command(brief=desc['trade']['short'], description=desc['trade']['long'], aliases=['t'])
-	@commands.cooldown(1, 60 * _cd, commands.BucketType.user)
+	@commands.command(brief=desc['trade']['short'], description=desc['trade']['long'], aliases=desc['trade']['alias'])
+	@commands.cooldown(1, desc['trade']['cd'] * _cd, commands.BucketType.user)
 	@commands.guild_only()
 	async def trade(self, ctx, other_person, your_slime, their_slime):
 		# Remove whitespace from id and format arguments to make sense in s!help usage
@@ -646,8 +647,8 @@ class Slimes(commands.Cog):
 			elif reaction.emoji == buttons[1]:
 				await ctx.send('The trade has been declined!')
 
-	@commands.command(brief=desc['favorite']['short'], description=desc['favorite']['long'], aliases=['f', 'fav'])
-	@commands.cooldown(1, 5 * _cd, commands.BucketType.user)
+	@commands.command(brief=desc['favorite']['short'], description=desc['favorite']['long'], aliases=desc['favorite']['alias'])
+	@commands.cooldown(1, desc['favorite']['cd'] * _cd, commands.BucketType.user)
 	async def favorite(self, ctx, id=None):
 		# Check user is registered
 		userID = str(ctx.author.id)
@@ -670,8 +671,8 @@ class Slimes(commands.Cog):
 		res = self.favSlime(id, ref)
 		await ctx.reply(res)
 
-	@commands.command(brief=desc['favorites']['short'], description=desc['favorites']['long'], aliases=['fs', 'favs'])
-	@commands.cooldown(1, 60 * _cd, commands.BucketType.user)
+	@commands.command(brief=desc['favorites']['short'], description=desc['favorites']['long'], aliases=desc['favorites']['alias'])
+	@commands.cooldown(1, desc['favorites']['cd'] * _cd, commands.BucketType.user)
 	async def favorites(self, ctx, clear=None):
 		# Check user is registered
 		userID = str(ctx.author.id)
@@ -697,7 +698,8 @@ class Slimes(commands.Cog):
 		await ctx.reply('Here are your favorites!', file=file)
 		os.remove(collage)
 	
-	@commands.command(brief=desc['give']['short'], description=desc['give']['long'])
+	@commands.command(brief=desc['give']['short'], description=desc['give']['long'], aliases=desc['give']['alias'])
+	@commands.cooldown(1, desc['give']['cd'] * _cd, commands.BucketType.user)
 	@commands.is_owner()
 	async def give(self, ctx, other, id):
 		other.replace(' ', '')
@@ -732,7 +734,8 @@ class Slimes(commands.Cog):
 		blob = bucket.blob(f'{bucketPath}{id}.png')
 		blob.upload_from_filename(path)
 
-	@commands.command(brief=desc['rarity']['short'], description=desc['rarity']['long'], aliases=['r'])
+	@commands.command(brief=desc['rarity']['short'], description=desc['rarity']['long'], aliases=desc['rarity']['alias'])
+	@commands.cooldown(1, desc['rarity']['cd'] * _cd, commands.BucketType.user)
 	async def rarity(self, ctx, id):
 		# Check if given id is valid
 		if not id or len(id) != 8:
@@ -746,7 +749,8 @@ class Slimes(commands.Cog):
 		embed = discord.Embed(title=f'{id}\' Rarity', description=text + f' (Score of {score})', color=discord.Color.green())
 		await ctx.reply(embed=embed)
 
-	@commands.command(brief=desc['rarities']['short'], description=desc['rarities']['long'])
+	@commands.command(brief=desc['rarities']['short'], description=desc['rarities']['long'], aliases=desc['rarities']['alias'])
+	@commands.cooldown(1, desc['rarities']['cd'] * _cd, commands.BucketType.user)
 	async def rarities(self, ctx):
 		rarities = [
 			'Extremely Ordinary',
@@ -761,8 +765,8 @@ class Slimes(commands.Cog):
 		embed = discord.Embed(title='Slime bRarities', description='\n'.join(rarities), color=discord.Color.green())
 		await ctx.reply(embed=embed)
 
-	@commands.command(brief=desc['top']['short'], description=desc['top']['long'])
-	@commands.cooldown(1, 60 * _cd, commands.BucketType.user)
+	@commands.command(brief=desc['top']['short'], description=desc['top']['long'], aliases=desc['top']['alias'])
+	@commands.cooldown(1, desc['top']['cd'] * _cd, commands.BucketType.user)
 	async def top(self, ctx, num=10):
 		# Check user is registered
 		userID = str(ctx.author.id)
@@ -787,8 +791,8 @@ class Slimes(commands.Cog):
 			embed.add_field(name=f'#{i + 1}', value=f'{slime} (Score of {score})')
 		await ctx.reply(embed=embed)
 
-	@commands.command(brief=desc['sell']['short'], description=desc['sell']['long'], aliases=['s'])
-	@commands.cooldown(1, 5 * _cd, commands.BucketType.user)
+	@commands.command(brief=desc['sell']['short'], description=desc['sell']['long'], aliases=desc['sell']['alias'])
+	@commands.cooldown(1, desc['sell']['cd'] * _cd, commands.BucketType.user)
 	async def sell(self, ctx, id=None):
 		# Check user is registered
 		userID = str(ctx.author.id)
@@ -854,7 +858,8 @@ class Slimes(commands.Cog):
 			elif response.emoji == buttons[1]:
 				await msg.edit(content='You turned away the offer.')
 
-	@commands.command(brief=desc['balance']['short'], description=desc['balance']['long'], aliases=['b', 'bal', 'coins', 'wallet'])
+	@commands.command(brief=desc['balance']['short'], description=desc['balance']['long'], aliases=desc['balance']['alias'])
+	@commands.cooldown(1, desc['balance']['cd'] * _cd, commands.BucketType.user)
 	async def balance(self, ctx):
 		# Check user is registered
 		userID = str(ctx.author.id)
@@ -873,8 +878,8 @@ class Slimes(commands.Cog):
 		await ctx.reply(f'You have {coins} coin(s), that\'s worth like {round(coins / SLIME_PRICE, 1)} slime(s)!')
 
 
-	@commands.command(brief=desc['profile']['short'], description=desc['profile']['long'], aliases=['p', 'me'])
-	@commands.cooldown(1, 60 * _cd, commands.BucketType.user)
+	@commands.command(brief=desc['profile']['short'], description=desc['profile']['long'], aliases=desc['profile']['alias'])
+	@commands.cooldown(1, desc['profile']['cd'] * _cd, commands.BucketType.user)
 	async def profile(self, ctx):
 		# Check user is registered
 		userID = str(ctx.author.id)
@@ -915,8 +920,8 @@ class Slimes(commands.Cog):
 		embed.add_field(name='Rarest Slime', value=f'{highestRarity[0]} ({highestRarity[1]})')
 		await ctx.reply(embed=embed)
 
-	@commands.command(brief=desc['reset']['short'], description=desc['reset']['long'])
-	@commands.cooldown(1, 86400 * _cd, commands.BucketType.user)
+	@commands.command(brief=desc['reset']['short'], description=desc['reset']['long'], aliases=desc['reset']['alias'])
+	@commands.cooldown(1, desc['reset']['cd'] * _cd, commands.BucketType.user)
 	async def reset(self, ctx):
 		# Check user is registered
 		userID = str(ctx.author.id)

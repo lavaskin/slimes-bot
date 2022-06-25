@@ -1,7 +1,6 @@
 # Script to auto generate the stripe images for the slime backgrounds.
 # Reads in from ./res/colors.txt and deletes the old stripes folder
 # Makes manually creating them slightly less tedious
-
 import json
 import os
 import shutil

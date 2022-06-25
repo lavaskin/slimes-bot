@@ -1,7 +1,5 @@
 # Made for when you want to change how ID generation is done
 # For example, I swapped '!' in the ID for lowercase 'z', so I need to change all existing ID's accordingly
-
-
 import os
 from firebase_admin import credentials, firestore, initialize_app
 

@@ -269,7 +269,7 @@ class Slimes(commands.Cog):
 		left = (desc['claim']['cd'] - since) * _cd
 		if left > 0:
 			minutes, seconds = self.convertTime(left)
-			return 0, f'There\'s {minutes}m, {seconds}s left before you can claim coins again!'
+			return 0, f'There\'s *{minutes}m, {seconds}s* left before you can claim coins again!'
 
 		payout = 40
 		payout += random.randint(-SLIME_PRICE, SLIME_PRICE)
@@ -403,7 +403,7 @@ class Slimes(commands.Cog):
 			await ctx.reply(err, delete_after=10)
 		else:
 			coins = ref.get().to_dict()['coins']
-			await ctx.reply(f'You collected {payout} coins! You now have {coins} coins.')
+			await ctx.reply(f'You collected **{payout}** coins! You now have **{coins}**.')
 
 	@commands.command(brief=desc['generate']['short'], description=desc['generate']['long'], aliases=desc['generate']['alias'])
 	@commands.cooldown(1, desc['generate']['cd'] * _cd, commands.BucketType.user)
@@ -430,7 +430,7 @@ class Slimes(commands.Cog):
 				since = self.timeSince(ref.get().to_dict()['lastclaim'])
 				mins, secs = self.convertTime(self.desc['claim']['cd'] - since)
 
-				await ctx.reply(f'You need **{SLIME_PRICE * count - coins}** more coins! You can get more in {mins}m, {secs}s.', delete_after=10)
+				await ctx.reply(f'You need **{SLIME_PRICE * count - coins}** more coins! You can get more in *{mins}m, {secs}s*.', delete_after=10)
 				return
 			else:
 				desc = f'You claimed {payout} coins!\n'

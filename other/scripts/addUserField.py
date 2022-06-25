@@ -4,9 +4,9 @@ from firebase_admin import credentials, firestore, initialize_app
 
 # Field to add
 fieldName = 'lastclaim'
-field = { fieldName: firestore.SERVER_TIMESTAMP }
+field = { fieldName: 0 }
 
-dev = True
+dev = False
 collection = 'users-dev' if dev else 'users'
 dbCred = credentials.Certificate('./other/firebase.json')
 initialize_app(dbCred)

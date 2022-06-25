@@ -3,6 +3,7 @@ import asyncio
 import json
 import math
 import random
+import time
 import discord
 import os
 from os.path import exists
@@ -42,6 +43,7 @@ class Slimes(commands.Cog):
 		self.width, self.height = 200, 200
 		self.fontPath = os.getenv('FONT_PATH', 'consola.ttf')
 		self.siteLink = os.getenv('SITE_LINK')
+		self.desc = desc # Allow access in functions
 
 		# Init Database
 		dbCred = credentials.Certificate('./other/firebase.json')
@@ -81,6 +83,22 @@ class Slimes(commands.Cog):
 	# Utility Functions #
 	#####################
 
+	# Makes a new document for a user if they aren't registered
+	def checkUser(self, id, author=None):
+		# Check if already registered
+		ref = self.db.collection(self.collection).document(id)
+
+		if not ref.get().exists:
+			if not author: return False
+			# Make document
+			data = {'tag': str(author), 'slimes': [], 'favs': [], 'coins': 100, 'pfp': '', 'selling': [], 'lastclaim': 0}
+			ref.set(data)
+			print(' | Registered: ' + str(author))
+			return False
+		else:
+			# They are already registered
+			return True
+
 	# Given a slime ID, determines how rare it is. Returns its rank and rarity number
 	def getRarity(self, id):
 		text = 'This slimes rarity is unknown...'
@@ -119,7 +137,6 @@ class Slimes(commands.Cog):
 
 		return text, score
 
-
 	# Test if a given parameter randomly passes
 	def passesParam(self, param):
 		return random.randint(1, 100) < (self.params[param] * 100)
@@ -151,21 +168,6 @@ class Slimes(commands.Cog):
 		for i in list:
 			res += (i + c)
 		return res[:-1]
-
-	# Makes a new document for a user if they aren't registered
-	def checkUser(self, id, author=None):
-		# Check if already registered
-		ref = self.db.collection(self.collection).document(id)
-
-		if not ref.get().exists:
-			if not author: return False
-			# Make document
-			data = {'tag': str(author), 'slimes': [], 'favs': [], 'coins': 100, 'pfp': '', 'selling': []}
-			ref.set(data)
-			return False
-		else:
-			# They are already registered
-			return True
 
 	# Encodes a single number
 	def encodeNum(self, n):
@@ -250,6 +252,31 @@ class Slimes(commands.Cog):
 		combined.save(fName)
 		combined.close()
 		return fName
+
+	def timeSince(self, date):
+		return math.ceil(time.time() - date)
+
+	# Retuns the minutes, seconds of a time in seconds
+	def convertTime(self, secs):
+		minutes = int(secs / 60)
+		seconds = int(secs % 60)
+		return minutes, seconds
+
+	# Returns an object of (claimed coins, error message)
+	def claimCoins(self, ref):
+		# Check cooldown
+		since = self.timeSince(ref.get().to_dict()['lastclaim'])
+		left = (desc['claim']['cd'] - since) * _cd
+		if left > 0:
+			minutes, seconds = self.convertTime(left)
+			return 0, f'There\'s {minutes}m, {seconds}s left before you can claim coins again!'
+
+		payout = 40
+		payout += random.randint(-SLIME_PRICE, SLIME_PRICE)
+
+		ref.update({'coins': firestore.Increment(payout)})
+		ref.update({'lastclaim': time.time()})
+		return payout, None
 
 
 	########################
@@ -362,21 +389,21 @@ class Slimes(commands.Cog):
 	################
 
 	@commands.command(brief=desc['claim']['short'], description=desc['claim']['long'], aliases=desc['claim']['alias'])
-	@commands.cooldown(1, desc['claim']['cd'] * _cd, commands.BucketType.user)
+	@commands.cooldown(1, 0, commands.BucketType.user)
 	async def claim(self, ctx):
 		# Check if the user is registered
 		userID = str(ctx.author.id)
 		self.checkUser(userID, ctx.author)
 
-		payout = 40
-		payout += random.randint(-SLIME_PRICE, SLIME_PRICE)
-
+		# Get Payout
 		ref = self.db.collection(self.collection).document(userID)
-		ref.update({'coins': firestore.Increment(payout)})
-		coins = ref.get().to_dict()['coins']
+		payout, err = self.claimCoins(ref)
 
-		await ctx.reply(f'You collected {payout} coins! You now have {coins} coins.')
-		return True
+		if err != None:
+			await ctx.reply(err, delete_after=10)
+		else:
+			coins = ref.get().to_dict()['coins']
+			await ctx.reply(f'You collected {payout} coins! You now have {coins} coins.')
 
 	@commands.command(brief=desc['generate']['short'], description=desc['generate']['long'], aliases=desc['generate']['alias'])
 	@commands.cooldown(1, desc['generate']['cd'] * _cd, commands.BucketType.user)
@@ -391,17 +418,27 @@ class Slimes(commands.Cog):
 
 		# Get user
 		ref = self.db.collection(self.collection).document(userID)
+		desc = ''
 
 		# Check if user has enough coins
-		try:
-			coins = ref.get().to_dict()['coins']
-			if coins < SLIME_PRICE * count:
-				await ctx.reply(f'You need {SLIME_PRICE * count - coins} more coins, Try **s!claim**', delete_after=10)
+		coins = ref.get().to_dict()['coins']
+		if coins < SLIME_PRICE * count:
+			# Try to claim coins
+			payout, err = self.claimCoins(ref)
+			if err != None:
+				# Get time left till next claim
+				since = self.timeSince(ref.get().to_dict()['lastclaim'])
+				mins, secs = self.convertTime(self.desc['claim']['cd'] - since)
+
+				await ctx.reply(f'You need **{SLIME_PRICE * count - coins}** more coins! You can get more in {mins}m, {secs}s.', delete_after=10)
 				return
-		except KeyError:
-			# For if the user is an old account where the coins attribute doesn't exist
-			await ctx.reply(f'You need {SLIME_PRICE * count} more coins, Try **s!claim**', delete_after=10)
-			return
+			else:
+				desc = f'You claimed {payout} coins!\n'
+				coins = ref.get().to_dict()['coins']
+		
+		# Change count to the amount the user can afford
+		if coins < SLIME_PRICE * count:
+			count = int(coins / SLIME_PRICE)
 
 		# Generate slimes
 		slimes = []
@@ -421,12 +458,11 @@ class Slimes(commands.Cog):
 			slime = slimes[0]
 
 			# Get rarity text
-			rarityText, _ = self.getRarity(slime[1])
-			rarityText += '\n\n'
+			rarityText = self.getRarity(slime[1])[0] + '\n\n'
 
 			# Make embed and send it
 			file = discord.File(slime[0])
-			embed = discord.Embed(title=f'Generated **{slime[1]}**', description=rarityText + balance, color=discord.Color.green())
+			embed = discord.Embed(title=f'Generated **{slime[1]}**', description=rarityText + desc + balance, color=discord.Color.green())
 			await ctx.reply(embed=embed, file=file)
 		
 		# Multiple slimes response
@@ -437,7 +473,7 @@ class Slimes(commands.Cog):
 
 			# Make embed and send it
 			file = discord.File(collage)
-			embed = discord.Embed(title=f'Generated {count} slimes', description=balance, color=discord.Color.green())
+			embed = discord.Embed(title=f'Generated {count} slimes', description=desc + balance, color=discord.Color.green())
 			await ctx.reply(embed=embed, file=file)
 			os.remove(collage)
 

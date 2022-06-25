@@ -8,8 +8,8 @@
 
 	"generate": {
 		"short": "Generates a new slime",
-		"long": "Creates a unique slime and replies to the user with it. This slime is now owned by the command user!\n\nCost: 10 coins\nCooldown: 30 seconds",
-		"cd": 30,
+		"long": "Creates a unique slime and replies to the user with it. This slime is now owned by the command user!\n\nCost: 10 coins\nCooldown: 15 seconds",
+		"cd": 15,
 		"alias": ["g", "gen"]
 	},
 
@@ -99,7 +99,7 @@
 
 	"reset": {
 		"short": "Completely resets your account",
-		"long": "WARNING: Only do this with 100% certainty. There are no reversals.\n\nWipes all your slimes from the server and resets your account.\nCooldown: 24 hours",
+		"long": "WARNING: Only do this with 100% certainty. There are no reversals.\n\nWipes all your slimes from the server and resets your account.\n\nCooldown: 24 hours",
 		"cd": 86400,
 		"alias": []
 	}

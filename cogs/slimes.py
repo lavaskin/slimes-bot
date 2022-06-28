@@ -42,7 +42,7 @@ class Slimes(commands.Cog):
 		self.outputDir = './output/dev/' if _dev else './output/prod/'
 		self.width, self.height = 200, 200
 		self.fontPath = os.getenv('FONT_PATH', 'consola.ttf')
-		self.siteLink = os.getenv('SITE_LINK')
+		self.siteLink = os.getenv('SITE_LINK') if not _dev else 'http://localhost:4200/'
 		self.desc = desc # Allow access in functions
 
 		# Init Database

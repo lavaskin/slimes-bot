@@ -264,15 +264,26 @@ class Slimes(commands.Cog):
 
 	# Returns an object of (claimed coins, error message)
 	def claimCoins(self, ref):
+		user = ref.get().to_dict()
+		coins = user['coins']
+
+		# Check coin count
+		if coins >= 9999:
+			return 0, 'You have reached the maximum amount of claimable coins!'
+
 		# Check cooldown
-		since = self.timeSince(ref.get().to_dict()['lastclaim'])
+		since = self.timeSince(user['lastclaim'])
 		left = (desc['claim']['cd'] - since) * _cd
 		if left > 0:
 			minutes, seconds = self.convertTime(left)
 			return 0, f'There\'s *{minutes}m, {seconds}s* left before you can claim coins again!'
 
-		payout = 40
-		payout += random.randint(-SLIME_PRICE, SLIME_PRICE)
+		# Calc payout
+		# Every 1000 coins collected, lower the payout amount by 10% (Minimum of 10% payout))
+		# Only triggers over 500 coins
+		payout = 40 + random.randint(-SLIME_PRICE, SLIME_PRICE)
+		multiplier = max(round(1 - round((coins / 1000) * 0.1, 3), 3), 0.1) if coins > 500 else 1
+		payout = math.ceil(payout * multiplier)
 
 		ref.update({'coins': firestore.Increment(payout)})
 		ref.update({'lastclaim': time.time()})
@@ -930,7 +941,7 @@ class Slimes(commands.Cog):
 		favs = ref.get().to_dict()['favs']
 
 		# Loop through slimes to gather statistics
-		totalValue = coins
+		totalValue = 0
 		averageRarity = 0
 		highestRarity = ('', 0)
 

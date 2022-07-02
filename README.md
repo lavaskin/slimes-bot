@@ -13,7 +13,7 @@ The bot has an econemy system, use s!claim to claim coins every hour and s!gener
 See [this description file](https://github.com/Lavaskin/slimes-bot/blob/main/other/commands.json) as I'm too lazy to maintain two lists, or use s!help on the bot.
 
 ### **TODO**
-There is a Trello board that I'm not paying to have an observer option on, but I usually make feastures I'm working on/planning known.
+There is a [Trello board](https://trello.com/invite/b/PQAkZuv1/9c4206afa51bd6153ae5931649f0bfd8/slimes) that I'm not paying to have an observer option on, but I usually make feastures I'm working on/planning known.
 
 ### **Credits**
 - PhinalDestination: SlimeV2 pixel art. General testing.

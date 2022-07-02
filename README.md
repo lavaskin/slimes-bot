@@ -23,7 +23,7 @@ See [this description file](https://github.com/Lavaskin/slimes-bot/blob/main/oth
 
 ### **Credits**
 - PhinalDestination: SlimeV2 pixel art. General testing.
+- [Holmesian](https://holmesian.carrd.co/ ): Tons of assets added in [this commit](https://github.com/Lavaskin/slimes-bot/commit/e0ab292ff4e4977a9c3004bfe95d3316373c5c93)!
 - KingTenechi: Ideas and help with color verification.
 - Sinful Dante: General testing.
 - Mr. Pt: General testing.
-- Holmesian: Tons of assets added in [this commit](https://github.com/Lavaskin/slimes-bot/commit/e0ab292ff4e4977a9c3004bfe95d3316373c5c93)!

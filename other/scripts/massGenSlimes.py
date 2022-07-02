@@ -14,7 +14,7 @@ output = './output/mass/'
 def countFiles(dir):
 	# Counts the amount of files in a directory
 	return len([f for f in os.listdir(dir) if os.path.isfile(dir + f)])
-partsDir      = './res/parts/slimes/'
+partsDir      = './res/parts/'
 specialBgs    = countFiles(partsDir + 'backgrounds/special/')
 regBodies     = countFiles(partsDir + 'bodies/regular/')
 specialBodies = countFiles(partsDir + 'bodies/special/')

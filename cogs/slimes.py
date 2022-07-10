@@ -854,30 +854,39 @@ class Slimes(commands.Cog):
 
 		# Get users slimes
 		ref = self.db.collection(self.collection).document(userID)
-		slimes = ref.get().to_dict()['slimes']
+		user = ref.get().to_dict()
+		slimes = user['slimes']
+		coins = user['coins']
+		favs = user['favs']
 
 		# Check if user has slimes
 		if not slimes:
 			await ctx.reply('You have no slimes to sell!', delete_after=5)
 			return
 
-		# Select most recent slime if no id is given
-		if not id: id = slimes[-1]
-
-		# Check if they own it
-		if id not in slimes:
-			await ctx.reply('You don\'t own that slime!', delete_after=5)
-			return
+		# No id is provided
+		if not id:
+			# Select most recent slime if no id is given
+			# Don't use favs
+			idx = len(slimes) - 1
+			while idx >= 0 and slimes[idx] in favs:
+				idx -= 1
+			id = slimes[idx]
+		
+		# They provide an id...
+		else:
+			# Check if they own it
+			if id not in slimes:
+				await ctx.reply('You don\'t own that slime!', delete_after=5)
+				return
+			# Check if its favorited
+			if id in favs:
+				await ctx.reply('You can\'t sell favorited slimes!', delete_after=5)
+				return
 
 		# Get slimes value
 		value = math.ceil(self.getRarity(id)[1] * SELLING_RATIO)
 		if value == 0: value = 1 # pity value
-
-		# Check if its favorited
-		favs = ref.get().to_dict()['favs']
-		if id in favs:
-			await ctx.reply('You can\'t trade favorited slimes!', delete_after=5)
-			return
 
 		# Build response
 		buttons = ['✔️', '❌']
@@ -896,7 +905,8 @@ class Slimes(commands.Cog):
 			if response.emoji == buttons[0]:
 				ref.update({'slimes': firestore.ArrayRemove([id])})
 				ref.update({'coins': firestore.Increment(value)})
-				await msg.edit(content=f'**{id}** was sold for {value} coin(s)!')
+				s = 's' if value > 1 else ''
+				await msg.edit(content=f'**{id}** was sold for {value} coin{s} (*New Balance: {coins + value}*)!')
 
 				# Remove the image from the server
 				os.remove(path)

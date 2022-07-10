@@ -13,17 +13,15 @@ The bot has an econemy system, use s!claim to claim coins every hour and s!gener
 See [this description file](https://github.com/Lavaskin/slimes-bot/blob/main/other/commands.json) as I'm too lazy to maintain two lists, or use s!help on the bot.
 
 ### **TODO**
-- Create custom help command.
-	- Default command is restrictive in its formatting and looks bad.
-- Make favorites appear at the top of the inventory list
-- Make it possible for specific hats to go behind the slime body layer
-- Remove slime files from firebase/storage when s!reset is used
-- Add s!sell to sell slimes you don't want.
-	- Add a reaction option when generating a slime to automatically sell it w/o s!sell.
+There is a [Trello board](https://trello.com/invite/b/PQAkZuv1/9c4206afa51bd6153ae5931649f0bfd8/slimes) that I'm not paying to have an observer option on, but I usually make features I'm working on/planning known.
 
 ### **Credits**
-- PhinalDestination: SlimeV2 pixel art. General testing.
-- KingTenechi: Ideas and help with color verification.
-- Sinful Dante: General testing.
-- Mr. Pt: General testing.
-- Holmesian: Tons of assets added in [this commit](https://github.com/Lavaskin/slimes-bot/commit/e0ab292ff4e4977a9c3004bfe95d3316373c5c93)!
+- Art:
+  - PhinalDestination: SlimeV2 pixel art.
+  - [Holmesian](https://holmesian.carrd.co/ ): Tons of assets added in [this commit](https://github.com/Lavaskin/slimes-bot/commit/e0ab292ff4e4977a9c3004bfe95d3316373c5c93)!
+- Testing:
+  - Sinful Dante
+  - Mr. Pt
+  - Phinal Destination
+- Other:
+  - KingTenechi: Ideas and help with color verification.

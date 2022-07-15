@@ -2,15 +2,18 @@
 # I'm just copy/pasting the generation code from the slimes class, may be out of date
 import random
 import sys
+from tracemalloc import start
 from PIL import Image
 import os
 from os.path import exists
 import shutil
+import time
 
 
 # Globals
 dupes = 0
 output = './output/mass/'
+fileType = '.png'
 def countFiles(dir):
 	# Counts the amount of files in a directory
 	return len([f for f in os.listdir(dir) if os.path.isfile(dir + f)])
@@ -30,14 +33,6 @@ with open('./res/colors.txt', 'r') as f:
 
 
 # Functions
-def encodeNum(n):
-	if n < 10:
-		return str(n)
-	elif n < 36:
-		return chr(n + 55)
-	else:
-		return chr(n + 61)
-
 def getPaintColors():
 	colorCount = len(colors)
 	c1 = random.randrange(0, colorCount)
@@ -68,6 +63,13 @@ def rollLayers(fName, layers, bgColor):
 	final.close()
 		
 def genSlime():
+	def encodeNum(n):
+		if n < 10:
+			return str(n)
+		if n < 36:
+			return chr(n + 55)
+		return chr(n + 61)
+
 	# Loops until a unique ID is created
 	while True:
 		bgColor, altColor = getPaintColors()
@@ -119,7 +121,7 @@ def genSlime():
 		else: id += 'z'
 
 		# Check that ID doesn't exist. If so, leave the loop
-		if not exists(output + id + '.png'):
+		if not exists(output + id + fileType):
 			break
 		else:
 			global dupes
@@ -127,7 +129,7 @@ def genSlime():
 			print('| DUPE SLIME:', id)
 
 	# Roll the layers and return the rolled file
-	fName = output + id + '.png'
+	fName = output + id + fileType
 	rollLayers(fName, layers, bgColor)
 	return fName
 
@@ -152,6 +154,18 @@ if __name__ == '__main__':
 		shutil.rmtree(output)
 		os.mkdir(output)
 
+	startTime = time.time()
 	for i in range(amt):
 		genSlime()
-	print(f'| Total dupes: {dupes} ({round((dupes / amt) * 100, 2)}%)')
+	elapsed = round((time.time() - startTime) * 1000, 3) # Convert to ms
+
+	# Calculate directory size
+	size = 0
+	for file in os.listdir(output):
+		fp = os.path.join(output, file)
+		size += os.path.getsize(fp)
+
+	# Print Output
+	print(f'> Total dupes: {dupes} ({round((dupes / amt) * 100, 2)}%)')
+	print(f'> Total generation time: {elapsed}')
+	print(f'> Total directory size: {size}')

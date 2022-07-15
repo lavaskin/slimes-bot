@@ -173,10 +173,9 @@ class Slimes(commands.Cog):
 	def encodeNum(self, n):
 		if n < 10:
 			return str(n)
-		elif n < 36:
+		if n < 36:
 			return chr(n + 55)
-		else:
-			return chr(n + 61)
+		return chr(n + 61)
 
 	# Turn a character from an encoded string into a number
 	def decodeChar(self, n):

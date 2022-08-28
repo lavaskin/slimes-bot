@@ -52,7 +52,8 @@
 		"short": "[OWNER ONLY] Gifts a slime to a given user",
 		"long": "Only the bots creator can use this command. This is not used to do a one-sided trade with someone.",
 		"cd": 0,
-		"alias": []
+		"alias": [],
+		"owner": true
 	},
 
 	"rarity": {

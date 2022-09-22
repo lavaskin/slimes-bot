@@ -256,7 +256,9 @@ class Slimes(commands.Cog, name='Slimes'):
 		return math.ceil(time.time() - date)
 
 	def getValue(self, id):
-		return math.ceil(self.getRarity(id)[1] * SELLING_RATIO)
+		val = math.ceil(self.getRarity(id)[1] * SELLING_RATIO)
+		if val == 0: val = 1 # pity value
+		return val
 
 	# Retuns the minutes, seconds of a time in seconds
 	def convertTime(self, secs):
@@ -888,7 +890,6 @@ class Slimes(commands.Cog, name='Slimes'):
 
 		# Get slimes value
 		value = self.getValue(id)
-		if value == 0: value = 1 # pity value
 
 		# Build response
 		buttons = ['✔️', '❌']
@@ -916,6 +917,102 @@ class Slimes(commands.Cog, name='Slimes'):
 			# Don't sell
 			elif response.emoji == buttons[1]:
 				await msg.edit(content='You turned away the offer.')
+
+
+	@commands.command(brief=desc['bulksell']['short'], description=desc['bulksell']['long'], aliases=desc['bulksell']['alias'])
+	@commands.cooldown(1, desc['bulksell']['cd'] * _cd, commands.BucketType.user)
+	async def bulksell(self, ctx, parameter=None, num=None):
+		validParameters = ['last', 'rarity', 'all']
+
+		# Check if the user used a valid parameter
+		if not parameter or parameter not in validParameters:
+			await ctx.reply('You need to specify a valid parameter!', delete_after=5)
+			return
+
+		# Check if the user gave a valid number if the parameter needs it
+		if parameter == 'last' or parameter == 'rarity':
+			if not num or not num.isdigit():
+				await ctx.reply('You need to specify a valid number!', delete_after=5)
+				return
+				
+			# Turn num into an int and check if its valid
+			num = int(num)
+			if num <= 0 or num > 9999:
+				await ctx.reply('The max range is 1 -> 9999!', delete_after=5)
+				return
+
+		# Check user is registered
+		userID = str(ctx.author.id)
+		if not self.checkUser(userID):
+			await ctx.reply('You have no slimes!', delete_after=5)
+			return
+
+		# Get user information
+		ref = self.db.collection(self.collection).document(userID)
+		user = ref.get().to_dict()
+		slimes = user['slimes']
+		favs = user['favs']
+		coins = user['coins']
+
+		# Remove favorites from the list of slimes, then check if they have any
+		for fav in favs: slimes.remove(fav)
+		if not slimes:
+			await ctx.reply('You have no slimes to sell!', delete_after=5)
+			return
+
+		# Get the slimes to sell and their values
+		toSell = []
+		saleValue = 0
+		if parameter == 'last':
+			# Check if the user has enough slimes
+			if len(slimes) < num:
+				await ctx.reply(f'You don\'t have {num} slimes!', delete_after=5)
+				return
+
+			# Get the last num slimes
+			toSell = slimes[-num:]
+			for slime in toSell:
+				saleValue += self.getValue(slime)
+
+		elif parameter == 'rarity':
+			# Get the slimes under/equal to the given rarity
+			for slime in slimes:
+				if self.getRarity(slime)[1] <= num:
+					toSell.append(slime)
+					saleValue += self.getValue(slime)
+
+		elif parameter == 'all':
+			toSell = slimes
+			for slime in toSell:
+				saleValue += self.getValue(slime)
+
+		else:
+			await ctx.reply('Something went wrong...', delete_after=5)
+			return
+
+		if not toSell:
+			await ctx.reply('No slimes matched your parameter!', delete_after=5)
+			return
+
+		# Build response
+		buttons = ['✔️', '❌']
+		msg = await ctx.reply(f'Are you sure you want to sell {len(toSell)} slime(s) for **{saleValue}** coin(s)?')
+		for button in buttons: await msg.add_reaction(button)
+
+		# Process response
+		try:
+			reaction, _ = await self.bot.wait_for("reaction_add", check=lambda reaction, user: user == ctx.author and reaction.emoji in buttons, timeout=10.0)
+		except asyncio.TimeoutError:
+			return
+		else:
+			if reaction.emoji == buttons[0]:
+				# Sell slimes
+				ref.update({'slimes': firestore.ArrayRemove(toSell)})
+				ref.update({'coins': firestore.Increment(saleValue)})
+
+				await msg.edit(content=f'**{len(toSell)}** slime(s) were sold for {saleValue} coin(s) (*New Balance: {coins + saleValue}*)!')
+			elif reaction.emoji == buttons[1]:
+				await msg.edit(content='Your slimes are safe!')
 
 	@commands.command(brief=desc['balance']['short'], description=desc['balance']['long'], aliases=desc['balance']['alias'])
 	@commands.cooldown(1, desc['balance']['cd'] * _cd, commands.BucketType.user)

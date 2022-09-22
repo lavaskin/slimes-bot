@@ -35,7 +35,7 @@ _dev = True if _env == 'True' else False
 _cd  = 0 if _dev else 1 # Turn off cooldowns in dev
 
 
-class Slimes(commands.Cog):
+class Slimes(commands.Cog, name='Slimes'):
 	def __init__(self, bot):
 		# Set random class properties
 		self.bot = bot
@@ -254,6 +254,9 @@ class Slimes(commands.Cog):
 
 	def timeSince(self, date):
 		return math.ceil(time.time() - date)
+
+	def getValue(self, id):
+		return math.ceil(self.getRarity(id)[1] * SELLING_RATIO)
 
 	# Retuns the minutes, seconds of a time in seconds
 	def convertTime(self, secs):
@@ -884,7 +887,7 @@ class Slimes(commands.Cog):
 				return
 
 		# Get slimes value
-		value = math.ceil(self.getRarity(id)[1] * SELLING_RATIO)
+		value = self.getValue(id)
 		if value == 0: value = 1 # pity value
 
 		# Build response
@@ -1019,5 +1022,5 @@ class Slimes(commands.Cog):
 				await msg.edit(content='Your account is safe!')
 
 
-def setup(bot):
-	bot.add_cog(Slimes(bot))
+async def setup(bot):
+	await bot.add_cog(Slimes(bot))

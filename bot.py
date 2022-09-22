@@ -1,3 +1,4 @@
+import asyncio
 import os
 import discord
 from discord.ext import commands
@@ -6,8 +7,15 @@ from dotenv import load_dotenv
 
 # Setup Bot
 load_dotenv()
+intents = discord.Intents.default()
+intents.message_content = True
 activity = discord.Activity(type=discord.ActivityType.listening, name="s!help")
-bot = commands.Bot(command_prefix='s!', activity=activity, case_insensitive=True)
+bot = commands.Bot(
+	command_prefix='s!',
+	activity=activity,
+	case_insensitive=True,
+	intents=intents
+)
 
 
 @bot.event
@@ -25,12 +33,20 @@ async def on_command_error(ctx, error):
 async def on_ready():
 	print(' > Discord connected, bot on:')
 
-if __name__ == '__main__':
+
+async def main():
 	env = os.getenv('SLIME_DEV', 'True')
 	dev = True if env == 'True' else False
 	token = 'DISCORD_DEV' if dev else 'DISCORD_PROD'
 	print(' > Dev Mode:', str(dev))
 
 	# Load cogs and run
-	bot.load_extension('cogs.slimes')
-	bot.run(os.getenv(token), bot=True, reconnect=True)
+	await bot.load_extension('cogs.slimes')
+	await bot.start(os.getenv(token), reconnect=True)
+
+if __name__ == '__main__':
+	# Catch CTRL+C
+	try:
+		asyncio.run(main())
+	except KeyboardInterrupt:
+		print(' > CTRL+C detected, exiting...')

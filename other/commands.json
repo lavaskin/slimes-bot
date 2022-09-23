@@ -86,7 +86,7 @@
 
 	"bulksell": {
 		"short": "Sells slimes in bulk given specific parameters",
-		"long": "Given an optional parameter, sells some of your slimes in bulk.\n\nParameters:\nlast <x> - Sells x amount of your last obtained slimes\nrarity <x> - Sells all slimes below and equal to the specified rarity\nall - Sells all non-favorited slimes\n\nCooldown: 60 seconds",
+		"long": "Given an optional parameter, sells some of your slimes in bulk.\n\nParameters:\nlast <x> - Sells x amount of your last obtained slimes\nrarity <x> - Sells all slimes below the specified rarity\nall - Sells all non-favorited slimes\n\nCooldown: 60 seconds",
 		"cd": 60,
 		"alias": ["bs", "bulk"]
 	},

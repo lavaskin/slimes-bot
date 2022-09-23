@@ -135,7 +135,11 @@ class Slimes(commands.Cog, name='Slimes'):
 		elif score >= 20:
 			text = 'This is an :sparkles:**overwhelmingly rare** slime!!!'
 
-		return text, score
+		# Get value
+		value = score * SELLING_RATIO
+		value = 1 if value == 0 else value # Pity points
+
+		return text, score, value
 
 	# Test if a given parameter randomly passes
 	def passesParam(self, param):
@@ -254,11 +258,6 @@ class Slimes(commands.Cog, name='Slimes'):
 
 	def timeSince(self, date):
 		return math.ceil(time.time() - date)
-
-	def getValue(self, id):
-		val = math.ceil(self.getRarity(id)[1] * SELLING_RATIO)
-		if val == 0: val = 1 # pity value
-		return val
 
 	# Retuns the minutes, seconds of a time in seconds
 	def convertTime(self, secs):
@@ -794,7 +793,7 @@ class Slimes(commands.Cog, name='Slimes'):
 			return
 
 		# Get data
-		text, score = self.getRarity(id)
+		text, score, _ = self.getRarity(id)
 
 		# Send embed response
 		embed = discord.Embed(title=f'{id}\' Rarity', description=text + f' (Score of {score})', color=discord.Color.green())
@@ -889,7 +888,7 @@ class Slimes(commands.Cog, name='Slimes'):
 				return
 
 		# Get slimes value
-		value = self.getValue(id)
+		value = self.getRarity(id)[2]
 
 		# Build response
 		buttons = ['✔️', '❌']
@@ -972,19 +971,20 @@ class Slimes(commands.Cog, name='Slimes'):
 			# Get the last num slimes
 			toSell = slimes[-num:]
 			for slime in toSell:
-				saleValue += self.getValue(slime)
+				saleValue += self.getRarity(slime)[2]
 
 		elif parameter == 'rarity':
 			# Get the slimes under/equal to the given rarity
 			for slime in slimes:
-				if self.getRarity(slime)[1] <= num:
+				_, rarity, value = self.getRarity(slime)
+				if rarity < num:
 					toSell.append(slime)
-					saleValue += self.getValue(slime)
+					saleValue += value
 
 		elif parameter == 'all':
 			toSell = slimes
 			for slime in toSell:
-				saleValue += self.getValue(slime)
+				saleValue += self.getRarity(slime)[2]
 
 		else:
 			await ctx.reply('Something went wrong...', delete_after=5)
@@ -1055,10 +1055,10 @@ class Slimes(commands.Cog, name='Slimes'):
 		highestRarity = ('', 0)
 
 		for slime in slimes:
-			rarity = self.getRarity(slime)[1]
+			_, rarity, value = self.getRarity(slime)
 			if rarity > highestRarity[1]: highestRarity = (slime, rarity)
 			averageRarity += rarity
-			totalValue += rarity * SELLING_RATIO
+			totalValue += value
 
 		averageRarity /= len(slimes)
 		averageRarity = round(averageRarity, 1)

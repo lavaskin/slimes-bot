@@ -1011,6 +1011,11 @@ class Slimes(commands.Cog, name='Slimes'):
 				ref.update({'coins': firestore.Increment(saleValue)})
 
 				await msg.edit(content=f'**{len(toSell)}** slime(s) were sold for {saleValue} coin(s) (*New Balance: {coins + saleValue}*)!')
+
+				# Remove the images from the server
+				for slime in toSell:
+					path = f'{self.outputDir}{slime}.png'
+					os.remove(path)
 			elif reaction.emoji == buttons[1]:
 				await msg.edit(content='Your slimes are safe!')
 

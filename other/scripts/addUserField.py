@@ -3,7 +3,7 @@ from firebase_admin import credentials, firestore, initialize_app
 
 
 # Field to add
-fieldName = 'lastclaim'
+fieldName = 'exp'
 field = { fieldName: 0 }
 
 dev = False
@@ -22,7 +22,7 @@ for user in userDocs:
 
 	try:
 		userRef.get().to_dict()[fieldName]
-		print(f'> Skipped {user.id}')
+		print(f'> Skipped: {user.id}')
 	except KeyError:
 		userRef.update(field)
 		print(f'> Added Field: {user.id}')

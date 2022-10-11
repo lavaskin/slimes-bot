@@ -105,6 +105,13 @@
 		"alias": ["p", "me"]
 	},
 
+	"level": {
+		"short": "Shows the users level",
+		"long": "Shows the users level and the percent to the next.\nEXP is earned when creating slimes based on rarity.\n\nCooldown: 10 seconds",
+		"cd": 10,
+		"alias": ["l", "lvl", "exp", "xp"]
+	},
+
 	"reset": {
 		"short": "Completely resets your account",
 		"long": "WARNING: Only do this with 100% certainty. There are no reversals.\n\nWipes all your slimes from the server and resets your account.\n\nCooldown: 24 hours",

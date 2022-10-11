@@ -266,8 +266,7 @@ class Slimes(commands.Cog, name='Slimes'):
 		return minutes, seconds
 
 	# Returns an object of (claimed coins, error message)
-	def claimCoins(self, ref):
-		user = ref.get().to_dict()
+	def claimCoins(self, ref, user):
 		coins = user['coins']
 
 		# Check coin count
@@ -291,6 +290,13 @@ class Slimes(commands.Cog, name='Slimes'):
 		ref.update({'coins': firestore.Increment(payout)})
 		ref.update({'lastclaim': time.time()})
 		return payout, None
+
+	# Returns the users level given their xp, and their % to the next level
+	def calculateLevel(self, xp):
+		level = round((0.25 * math.sqrt(xp)) + 1, 2)
+		lo = math.floor(level)
+		percent = int(round((level - lo) * 100, 2))
+		return lo, percent
 
 
 	########################
@@ -411,7 +417,8 @@ class Slimes(commands.Cog, name='Slimes'):
 
 		# Get Payout
 		ref = self.db.collection(self.collection).document(userID)
-		payout, err = self.claimCoins(ref)
+		user = ref.get().to_dict()
+		payout, err = self.claimCoins(ref, user)
 
 		if err != None:
 			await ctx.reply(err, delete_after=10)
@@ -432,23 +439,24 @@ class Slimes(commands.Cog, name='Slimes'):
 
 		# Get user
 		ref = self.db.collection(self.collection).document(userID)
+		user = ref.get().to_dict()
 		desc = ''
 
 		# Check if user has enough coins
-		coins = ref.get().to_dict()['coins']
+		coins = user['coins']
 		if coins < SLIME_PRICE * count:
 			# Try to claim coins
-			payout, err = self.claimCoins(ref)
+			payout, err = self.claimCoins(ref, user)
 			if err != None:
 				# Get time left till next claim
-				since = self.timeSince(ref.get().to_dict()['lastclaim'])
+				since = self.timeSince(user['lastclaim'])
 				mins, secs = self.convertTime(self.desc['claim']['cd'] - since)
 
 				await ctx.reply(f'You need **{SLIME_PRICE * count - coins}** more coins! You can get more in *{mins}m, {secs}s*.', delete_after=10)
 				return
 			else:
 				desc = f'You claimed {payout} coins!\n'
-				coins = ref.get().to_dict()['coins']
+				coins = ref.get().to_dict()['coins'] # re-fetch coins
 		
 		# Change count to the amount the user can afford
 		if coins < SLIME_PRICE * count:
@@ -456,8 +464,11 @@ class Slimes(commands.Cog, name='Slimes'):
 
 		# Generate slimes
 		slimes = []
-		for i in range(int(count)):
-			slimes.append(self.genSlime())
+		totalRarity = 0
+		for _ in range(int(count)):
+			generatedSlime = self.genSlime()
+			slimes.append(generatedSlime)
+			totalRarity += self.getRarity(generatedSlime[1])[1]
 
 		# Add slime to the database
 		for slime in slimes:
@@ -490,6 +501,17 @@ class Slimes(commands.Cog, name='Slimes'):
 			embed = discord.Embed(title=f'Generated {count} slimes', description=desc + balance, color=discord.Color.green())
 			await ctx.reply(embed=embed, file=file)
 			os.remove(collage)
+
+		# Update EXP based on slime rarity
+		oldLevel = self.calculateLevel(user['exp'])[0]
+		newLevel = self.calculateLevel(user['exp'] + totalRarity)[0]
+		ref.update({'exp': firestore.Increment(totalRarity)})
+
+		# If the user leveled up, send a message and give them coins based on the new level
+		if newLevel > oldLevel:
+			levelBonus = min(int((newLevel * 0.5) * 100), 500)
+			ref.update({'coins': firestore.Increment(levelBonus)})
+			await ctx.reply(f'You leveled up to **Level {newLevel}**! Here\'s **{levelBonus}** :coin: as a bonus!')
 
 		# Upload slimes to firebase storage (Takes a second, better to do after response is given)
 		bucket = storage.bucket()
@@ -1036,7 +1058,7 @@ class Slimes(commands.Cog, name='Slimes'):
 		except KeyError:
 			ref.update({'coins': firestore.Increment(0)}) # Set users coins to 0 if they don't have the key in the db
 		
-		await ctx.reply(f'You have {coins} coin(s), that\'s worth like {round(coins / SLIME_PRICE, 1)} slime(s)!')
+		await ctx.reply(f'You have **{int(coins)}** :coin:, that\'s worth like {int(coins / SLIME_PRICE)} slime(s)!')
 
 
 	@commands.command(brief=desc['profile']['short'], description=desc['profile']['long'], aliases=desc['profile']['alias'])
@@ -1053,6 +1075,8 @@ class Slimes(commands.Cog, name='Slimes'):
 		slimes = ref.get().to_dict()['slimes']
 		coins = ref.get().to_dict()['coins']
 		favs = ref.get().to_dict()['favs']
+		exp = ref.get().to_dict()['exp']
+		level = self.calculateLevel(exp)[0]
 
 		# Loop through slimes to gather statistics
 		totalValue = 0
@@ -1073,12 +1097,42 @@ class Slimes(commands.Cog, name='Slimes'):
 
 		# Build response
 		embed = discord.Embed(title=f'{ctx.author.name}\'s Profile', color=discord.Color.green())
+		embed.set_thumbnail(url=ctx.author.display_avatar)
+		embed.add_field(name='Level', value=level)
 		embed.add_field(name='Total Slimes', value=f'{len(slimes)}')
 		embed.add_field(name='Coins', value=f'{coins}')
 		embed.add_field(name='Number of Favorites', value=f'{len(favs)}')
 		embed.add_field(name='Total Value', value=f'{math.ceil(totalValue)} :coin:')
 		embed.add_field(name='Average Rarity', value=f'{averageRarity}')
 		embed.add_field(name='Rarest Slime', value=f'{highestRarity[0]} ({highestRarity[1]})')
+		await ctx.reply(embed=embed)
+
+	@commands.command(brief=desc['level']['short'], description=desc['level']['long'], aliases=desc['level']['alias'])
+	@commands.cooldown(1, desc['level']['cd'] * _cd, commands.BucketType.user)
+	async def level(self, ctx):
+		# Check user is registered
+		userID = str(ctx.author.id)
+		if not self.checkUser(userID):
+			await ctx.reply('Generate a slime to start getting EXP!', delete_after=5)
+			return
+
+		ref = self.db.collection(self.collection).document(userID)
+		exp = ref.get().to_dict()['exp']
+		level, toNext = self.calculateLevel(exp)
+
+		# Build line of progress
+
+		# Get the number of full bars
+		fullBars = int(toNext / 10)
+		emptyBars = 10 - fullBars
+		progressBar = ':green_square:' * fullBars + ':white_large_square:' * emptyBars
+
+
+		# Build response
+		embed = discord.Embed(title=f'{ctx.author.name}\'s Level', color=discord.Color.green())
+		embed.add_field(name='Level', value=f'{level}')
+		embed.add_field(name='EXP', value=f'{toNext}%')
+		embed.add_field(name='Progress', value=f'{progressBar}')
 		await ctx.reply(embed=embed)
 
 	@commands.command(brief=desc['reset']['short'], description=desc['reset']['long'], aliases=desc['reset']['alias'])
@@ -1114,8 +1168,8 @@ class Slimes(commands.Cog, name='Slimes'):
 							if os.path.isfile(self.outputDir + f) and f[:f.rfind('.')] == slime:
 								os.remove(self.outputDir + f)
 				
-				# Reset slimes stored in firebase storage
-				# TODO
+				# TODO: Reset slimes stored in firebase storage
+				# ...
 
 				# Remove user document in database and respond
 				ref.delete()

@@ -136,7 +136,7 @@ class Slimes(commands.Cog, name='Slimes'):
 			text = 'This is an :sparkles:**overwhelmingly rare** slime!!!'
 
 		# Get value
-		value = score * SELLING_RATIO
+		value = int(score * SELLING_RATIO)
 		value = 1 if value == 0 else value # Pity points
 
 		return text, score, value
@@ -267,7 +267,7 @@ class Slimes(commands.Cog, name='Slimes'):
 
 	# Returns an object of (claimed coins, error message)
 	def claimCoins(self, ref, user):
-		coins = user['coins']
+		coins = int(user['coins'])
 
 		# Check coin count
 		if coins >= 9999:
@@ -423,8 +423,8 @@ class Slimes(commands.Cog, name='Slimes'):
 		if err != None:
 			await ctx.reply(err, delete_after=10)
 		else:
-			coins = ref.get().to_dict()['coins']
-			await ctx.reply(f'You collected **{payout}** coins! You now have **{coins}**.')
+			newBal = int(user['coins'] + payout)
+			await ctx.reply(f'You collected **{payout}** coins! You now have **{newBal}**.')
 
 	@commands.command(brief=desc['generate']['short'], description=desc['generate']['long'], aliases=desc['generate']['alias'])
 	@commands.cooldown(1, desc['generate']['cd'] * _cd, commands.BucketType.user)
@@ -456,7 +456,7 @@ class Slimes(commands.Cog, name='Slimes'):
 				return
 			else:
 				desc = f'You claimed {payout} coins!\n'
-				coins = ref.get().to_dict()['coins'] # re-fetch coins
+				coins = user['coins'] + payout
 		
 		# Change count to the amount the user can afford
 		if coins < SLIME_PRICE * count:
@@ -476,7 +476,7 @@ class Slimes(commands.Cog, name='Slimes'):
 
 		# Update balance
 		ref.update({'coins': firestore.Increment(-SLIME_PRICE * count)})
-		balance = f':coin: *{coins - SLIME_PRICE * count} left...*'
+		balance = f':coin: *{int(coins - SLIME_PRICE * count)} left...*'
 
 		# A single slime response
 		if count == 1:
@@ -930,7 +930,7 @@ class Slimes(commands.Cog, name='Slimes'):
 				ref.update({'slimes': firestore.ArrayRemove([id])})
 				ref.update({'coins': firestore.Increment(value)})
 				s = 's' if value > 1 else ''
-				await msg.edit(content=f'**{id}** was sold for {value} coin{s} (*New Balance: {coins + value}*)!')
+				await msg.edit(content=f'**{id}** was sold for {value} coin{s} (*New Balance: {int(coins + value)}*)!')
 
 				# Remove the image from the server
 				os.remove(path)
@@ -973,7 +973,7 @@ class Slimes(commands.Cog, name='Slimes'):
 		user = ref.get().to_dict()
 		slimes = user['slimes']
 		favs = user['favs']
-		coins = user['coins']
+		coins = int(user['coins'])
 
 		# Remove favorites from the list of slimes, then check if they have any
 		for fav in favs: slimes.remove(fav)
@@ -1072,10 +1072,11 @@ class Slimes(commands.Cog, name='Slimes'):
 		
 		# Get user data
 		ref = self.db.collection(self.collection).document(userID)
-		slimes = ref.get().to_dict()['slimes']
-		coins = ref.get().to_dict()['coins']
-		favs = ref.get().to_dict()['favs']
-		exp = ref.get().to_dict()['exp']
+		user = ref.get().to_dict()
+		slimes = user['slimes']
+		coins = int(user['coins'])
+		favs = user['favs']
+		exp = user['exp']
 		level = self.calculateLevel(exp)[0]
 
 		# Loop through slimes to gather statistics

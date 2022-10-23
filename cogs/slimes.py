@@ -83,21 +83,25 @@ class Slimes(commands.Cog, name='Slimes'):
 	# Utility Functions #
 	#####################
 
-	# Makes a new document for a user if they aren't registered
-	def checkUser(self, id, author=None):
-		# Check if already registered
-		ref = self.db.collection(self.collection).document(id)
-
-		if not ref.get().exists:
-			if not author: return False
-			# Make document
-			data = {'tag': str(author), 'slimes': [], 'favs': [], 'coins': 100, 'pfp': '', 'selling': [], 'lastclaim': 0}
+	# Returns the user and db reference for a given user if they exist
+	# Else, creates a new user and returns them with a ref
+	def getUser(self, ctx, id=None):
+		docID = str(ctx.author.id) if id is None else str(id)
+		ref = self.db.collection(self.collection).document(docID)
+		rawUser = ref.get()
+		
+		if not rawUser.exists:
+			# Create new user. If no author provided, use ID
+			data = {'tag': str(ctx.author), 'slimes': [], 'favs': [], 'coins': 100, 'pfp': '', 'selling': [], 'lastclaim': 0}
 			ref.set(data)
-			print(' | Registered: ' + str(author))
-			return False
+
+			# Re-fetch user and return
+			print(f' > New Registered User: {docID}')
+			return ref.get().to_dict(), ref
+
+		# Return the found user and ref
 		else:
-			# They are already registered
-			return True
+			return rawUser.to_dict(), ref
 
 	# Given a slime ID, determines how rare it is. Returns its rank and rarity number
 	def getRarity(self, id):
@@ -146,9 +150,8 @@ class Slimes(commands.Cog, name='Slimes'):
 		return random.randint(1, 100) < (self.params[param] * 100)
 
 	# Favorites a given slime or removes it if already favorited
-	def favSlime(self, id, ref):
+	def favSlime(self, id, ref, favs):
 		# Check if already in favorites and if favorites are maxed out
-		favs = ref.get().to_dict()['favs']
 		if id in favs:
 			ref.update({'favs': firestore.ArrayRemove([id])})
 			return f'**{id}** has been removed from your favorites!'
@@ -230,7 +233,8 @@ class Slimes(commands.Cog, name='Slimes'):
 		return fName
 
 	# Makes a 3x3 grid of slimes and returns the path to the output image
-	def makeCollage(self, userID, slimes):
+	def makeCollage(self, ctx, slimes):
+		userID = ctx.author.id
 		numFavs = len(slimes)
 		font = ImageFont.truetype(self.fontPath, 20)
 		fontLen,  _ = font.getsize('#' + slimes[0])
@@ -410,13 +414,9 @@ class Slimes(commands.Cog, name='Slimes'):
 	@commands.command(brief=desc['claim']['short'], description=desc['claim']['long'], aliases=desc['claim']['alias'])
 	@commands.cooldown(1, 0, commands.BucketType.user)
 	async def claim(self, ctx):
-		# Check if the user is registered
-		userID = str(ctx.author.id)
-		self.checkUser(userID, ctx.author)
+		user, ref = self.getUser(ctx)
 
 		# Get Payout
-		ref = self.db.collection(self.collection).document(userID)
-		user = ref.get().to_dict()
 		payout, err = self.claimCoins(ref, user)
 
 		if err != None:
@@ -428,21 +428,16 @@ class Slimes(commands.Cog, name='Slimes'):
 	@commands.command(brief=desc['generate']['short'], description=desc['generate']['long'], aliases=desc['generate']['alias'])
 	@commands.cooldown(1, desc['generate']['cd'] * _cd, commands.BucketType.user)
 	async def generate(self, ctx, count=1):
-		userID = str(ctx.author.id)
-		self.checkUser(userID, ctx.author)
+		user, ref = self.getUser(ctx)
 
 		# Check if count is between 1 and 9
 		if int(count) < 1 or int(count) > 9:
 			await ctx.reply('You can only generate between 1 and 9 slimes at a time.', delete_after=5)
 			return
 
-		# Get user
-		ref = self.db.collection(self.collection).document(userID)
-		user = ref.get().to_dict()
-		desc = ''
-
 		# Check if user has enough coins
 		coins = user['coins']
+		desc = ''
 		if coins < SLIME_PRICE * count:
 			# Try to claim coins
 			payout, err = self.claimCoins(ref, user)
@@ -493,7 +488,7 @@ class Slimes(commands.Cog, name='Slimes'):
 		else:
 			# Make collage of generated slimes
 			slimeIDs = [id for _, id in slimes]
-			collage = self.makeCollage(userID, slimeIDs)
+			collage = self.makeCollage(ctx, slimeIDs)
 
 			# Make embed and send it
 			file = discord.File(collage)
@@ -542,13 +537,10 @@ class Slimes(commands.Cog, name='Slimes'):
 	@commands.cooldown(1, desc['inventory']['cd'] * _cd, commands.BucketType.user)
 	async def inventory(self, ctx, filter=None):
 		perPage = 10
-		username = str(ctx.author)[:str(ctx.author).rfind('#')]
-		userID = str(ctx.author.id)
-		self.checkUser(userID)
-		buttons = ['⏮️', '⬅️', '➡️', '⏭️']
-		slimes = self.db.collection(self.collection).document(userID).get().to_dict()['slimes']
+		user, _ = self.getUser(ctx)
 
 		# Check if user even has slimes
+		slimes = user['slimes']
 		if not slimes:
 			await ctx.reply('You have no slimes!', delete_after=5)
 			return
@@ -572,10 +564,11 @@ class Slimes(commands.Cog, name='Slimes'):
 			return
 
 		# Create the URL to the site
-		siteAdd = self.siteLink + 'inventory/' + userID
+		siteAdd = self.siteLink + f'inventory/{ctx.author.id}'
 		siteAdd = siteAdd + '?filter=' + filter if filter else siteAdd
 
 		# Only post one page if less than listing amount
+		username = str(ctx.author)[:str(ctx.author).rfind('#')]
 		if len(filtered) <= perPage:
 			embed = embed=discord.Embed(title=f'{username}\'s Inventory', description=self.formatList(filtered, '\n'), url=siteAdd, color=discord.Color.green())
 			embed.set_footer(text=f'{len(filtered)} slime(s)...')
@@ -601,6 +594,7 @@ class Slimes(commands.Cog, name='Slimes'):
 		# Setup embed for reactions
 		cur = 0
 		msg = await ctx.reply(embed=pages[cur])
+		buttons = ['⏮️', '⬅️', '➡️', '⏭️']
 		for button in buttons:
 			await msg.add_reaction(button)
 
@@ -633,59 +627,54 @@ class Slimes(commands.Cog, name='Slimes'):
 	async def trade(self, ctx, other_person, your_slime, their_slime):
 		# Remove whitespace from id and format arguments to make sense in s!help usage
 		other = other_person.replace(' ', '')
-		slime1 = your_slime
-		slime2 = their_slime
 		
 		# Check if both users are registerd
-		userID = str(ctx.author.id)
-		otherID = other[3:-1]
+		idOne = str(ctx.author.id)
+		idTwo = other[2:-1]
 
-		if userID == otherID:
+		# Check if the ID's are equal and valid
+		if idOne == idTwo:
 			await ctx.reply('You can\t trade with yourself.', delete_after=5)
 			return
-		if not self.checkUser(userID) or not self.checkUser(otherID):
-			await ctx.reply('You both need to be registered to trade!', delete_after=5)
+		if len(idTwo) != 18:
+			await ctx.reply('Invalid user!', delete_after=5)
 			return
 
-		# Basic check on given id's
-		if len(slime1) != 8 or len(slime2) != 8:
-			await ctx.reply('Given ID\'s need to be valid!', delete_after=5)
-			return
+		userOne, refOne = self.getUser(ctx)
+		userTwo, refTwo = self.getUser(ctx, idTwo) # This is very unsafe !
 
 		# Check if both users have slimes, including the ones referenced in args
-		ref         = self.db.collection(self.collection).document(userID)
-		otherRef    = self.db.collection(self.collection).document(otherID)
-		slimes      = ref.get().to_dict()['slimes']
-		otherSlimes = otherRef.get().to_dict()['slimes']
-		if slime1 not in slimes:
-			await ctx.reply(f'You don\'t own **{slime1}**!', delete_after=5)
+		slimesOne = userOne['slimes']
+		slimesTwo = userTwo['slimes']
+		if your_slime not in slimesOne:
+			await ctx.reply(f'You don\'t own **{your_slime}**!', delete_after=5)
 			return
-		if slime2 not in otherSlimes:
-			await ctx.reply(f'They don\'t own **{slime2}**!', delete_after=5)
+		if their_slime not in slimesTwo:
+			await ctx.reply(f'They don\'t own **{their_slime}**!', delete_after=5)
 			return
 
 		# Check if slimes are favorited:
-		favs      = ref.get().to_dict()['favs']
-		otherFavs = otherRef.get().to_dict()['favs']
-		if slime1 in favs or slime2 in otherFavs:
+		favsOne = userOne['favs']
+		favsTwo = userTwo['favs']
+		if your_slime in favsOne or their_slime in favsTwo:
 			await ctx.reply('You can\'t trade favorited slimes!', delete_after=5)
 			return
 
 		# Make combined image
-		s1img = Image.open(f'{self.outputDir}{slime1}.png')
-		s2img = Image.open(f'{self.outputDir}{slime2}.png')
+		s1img = Image.open(f'{self.outputDir}{your_slime}.png')
+		s2img = Image.open(f'{self.outputDir}{their_slime}.png')
 		exchangeImg = Image.open('./res/arrows.png')
 		combined = Image.new(mode='RGBA', size=((self.width * 2) + 150, self.width), color=(0, 0, 0, 0))
 		combined.paste(s1img, (0, 0))
 		combined.paste(exchangeImg, (200, 0))
 		combined.paste(s2img, (350, 0))
-		fName = f'{self.outputDir}trade_{slime1}_{slime2}.png'
+		fName = f'{self.outputDir}trade_{your_slime}_{their_slime}.png'
 		# Place text
 		font = ImageFont.truetype(self.fontPath, 20, encoding='unic')
-		fontLen, _ = font.getsize('#' + slime1)
+		fontLen, _ = font.getsize('#' + your_slime)
 		draw = ImageDraw.Draw(combined)
-		draw.text((self.width - fontLen, 0), f"#{slime1}", (0, 0, 0), font=font)
-		draw.text((((self.width * 2) + 150) - fontLen, 0), f"#{slime2}", (0, 0, 0), font=font)
+		draw.text((self.width - fontLen, 0), f"#{your_slime}", (0, 0, 0), font=font)
+		draw.text((((self.width * 2) + 150) - fontLen, 0), f"#{their_slime}", (0, 0, 0), font=font)
 		# Save image
 		combined.save(fName)
 		combined.close()
@@ -693,43 +682,43 @@ class Slimes(commands.Cog, name='Slimes'):
 
 		# Post trade request
 		buttons = ['✔️', '❌']
-		msg = await ctx.send(f'{other}: <@{userID}> wants to trade their **{slime1}** for your **{slime2}**. Do you accept?', file=file)
+		msg = await ctx.send(f'{other}: <@{idOne}> wants to trade their **{your_slime}** for your **{their_slime}**. Do you accept?', file=file)
 		os.remove(fName)
 		for button in buttons:
 			await msg.add_reaction(button)
 
 		# Process message reaction
 		try:
-			reaction, user = await self.bot.wait_for("reaction_add", check=lambda reaction, user: user.id == int(otherID) and reaction.emoji in buttons, timeout=45.0)
+			reaction, user = await self.bot.wait_for("reaction_add", check=lambda reaction, user: user.id == int(idTwo) and reaction.emoji in buttons, timeout=45.0)
 		except asyncio.TimeoutError:
 			return
 		else:
 			if reaction.emoji == buttons[0]:
 				await ctx.send('The trade has been accepted!')
 
-				# Add other persons slimes
-				ref.update({'slimes': firestore.ArrayUnion([slime2])})
-				otherRef.update({'slimes': firestore.ArrayUnion([slime1])})
-				# Remove old slimes
-				ref.update({'slimes': firestore.ArrayRemove([slime1])})
-				otherRef.update({'slimes': firestore.ArrayRemove([slime2])})
+				# Add new slimes
+				refOne.update({'slimes': firestore.ArrayUnion([their_slime])})
+				refTwo.update({'slimes': firestore.ArrayUnion([your_slime])})
+
+				# Remove traded slimes
+				refOne.update({'slimes': firestore.ArrayRemove([your_slime])})
+				refTwo.update({'slimes': firestore.ArrayRemove([their_slime])})
+
 				# Update trade message
-				await msg.edit(content=f'The trade has been accepted!\n**{slime1}** :arrow_right: **{user}**\n**{slime2}** :arrow_right: **{ctx.author}**')
+				await msg.edit(content=f'The trade has been accepted!\n**{your_slime}** :arrow_right: **{user}**\n**{their_slime}** :arrow_right: **{ctx.author}**')
 			elif reaction.emoji == buttons[1]:
 				await ctx.send('The trade has been declined!')
 
 	@commands.command(brief=desc['favorite']['short'], description=desc['favorite']['long'], aliases=desc['favorite']['alias'])
 	@commands.cooldown(1, desc['favorite']['cd'] * _cd, commands.BucketType.user)
 	async def favorite(self, ctx, id=None):
-		# Check user is registered
-		userID = str(ctx.author.id)
-		if not self.checkUser(userID):
-			await ctx.reply('You have no slimes!', delete_after=5)
-			return
+		# Get user data
+		user, ref = self.getUser(ctx)
+		slimes = user['slimes']
 
-		# Grab users slimes
-		ref = self.db.collection(self.collection).document(userID)
-		slimes = ref.get().to_dict()['slimes']
+		if not slimes:
+			await ctx.reply('You have no slimes to favorite!', delete_after=5)
+			return
 
 		# Check if an id is provided or if they own it
 		if not id:
@@ -739,21 +728,21 @@ class Slimes(commands.Cog, name='Slimes'):
 			await ctx.reply('You don\'t own this slime!', delete_after=5)
 			return
 
-		res = self.favSlime(id, ref)
+		res = self.favSlime(id, ref, user['favs'])
 		await ctx.reply(res)
 
 	@commands.command(brief=desc['favorites']['short'], description=desc['favorites']['long'], aliases=desc['favorites']['alias'])
 	@commands.cooldown(1, desc['favorites']['cd'] * _cd, commands.BucketType.user)
 	async def favorites(self, ctx, clear=None):
-		# Check user is registered
-		userID = str(ctx.author.id)
-		if not self.checkUser(userID):
+		user, ref = self.getUser(ctx)
+		
+		# Check if they have slimes
+		if not user['slimes']:
 			await ctx.reply('You have no slimes!', delete_after=5)
 			return
 
 		# Check if they have any favs
-		ref = self.db.collection(self.collection).document(userID)
-		favs = ref.get().to_dict()['favs']
+		favs = user['favs']
 		if not favs:
 			await ctx.reply('You don\'t have any favs!')
 			return
@@ -764,7 +753,7 @@ class Slimes(commands.Cog, name='Slimes'):
 			await ctx.reply('Your favorites were reset.')
 			return
 
-		collage = self.makeCollage(userID, favs)
+		collage = self.makeCollage(ctx, favs)
 		file = discord.File(collage)
 		await ctx.reply('Here are your favorites!', file=file)
 		os.remove(collage)
@@ -775,11 +764,9 @@ class Slimes(commands.Cog, name='Slimes'):
 	async def give(self, ctx, other, id):
 		other.replace(' ', '')
 		userID = other[2:-1]
+		_, ref = self.getUser(ctx, userID)
 
-		# Do basic checks
-		if not self.checkUser(userID):
-			await ctx.reply(f'**{userID}** needs to be registered.')
-			return
+		# Check for a valid ID
 		if len(id) != 8:
 			await ctx.reply('ID\'s are 8 characters.')
 			return
@@ -792,7 +779,6 @@ class Slimes(commands.Cog, name='Slimes'):
 			return
 
 		# Add slime to the database
-		ref = self.db.collection(self.collection).document(userID)
 		ref.update({'slimes': firestore.ArrayUnion([id])})
 
 		# Send slime to user
@@ -807,7 +793,7 @@ class Slimes(commands.Cog, name='Slimes'):
 
 	@commands.command(brief=desc['rarity']['short'], description=desc['rarity']['long'], aliases=desc['rarity']['alias'])
 	@commands.cooldown(1, desc['rarity']['cd'] * _cd, commands.BucketType.user)
-	async def rarity(self, ctx, id):
+	async def rarity(self, ctx, id=None):
 		# Check if given id is valid
 		if not id or len(id) != 8:
 			await ctx.reply('I need a valid ID!', delete_after=5)
@@ -839,9 +825,9 @@ class Slimes(commands.Cog, name='Slimes'):
 	@commands.command(brief=desc['top']['short'], description=desc['top']['long'], aliases=desc['top']['alias'])
 	@commands.cooldown(1, desc['top']['cd'] * _cd, commands.BucketType.user)
 	async def top(self, ctx, num=10):
-		# Check user is registered
-		userID = str(ctx.author.id)
-		if not self.checkUser(userID):
+		user, _ = self.getUser(ctx)
+		slimes = user['slimes']
+		if not slimes:
 			await ctx.reply('You have no slimes!', delete_after=5)
 			return
 
@@ -849,9 +835,7 @@ class Slimes(commands.Cog, name='Slimes'):
 			await ctx.reply('You can only check your top 20!', delete_after=5)
 			return
 
-		# Get data
-		ref = self.db.collection(self.collection).document(userID)
-		slimes = ref.get().to_dict()['slimes']
+		# Get rarities
 		rarities = [(self.getRarity(slime)[1], slime) for slime in slimes]
 		rarities.sort(reverse=True)
 		rarities = rarities[:num]
@@ -865,9 +849,14 @@ class Slimes(commands.Cog, name='Slimes'):
 	@commands.command(brief=desc['sell']['short'], description=desc['sell']['long'], aliases=desc['sell']['alias'])
 	@commands.cooldown(1, desc['sell']['cd'] * _cd, commands.BucketType.user)
 	async def sell(self, ctx, id=None):
-		# Check user is registered
-		userID = str(ctx.author.id)
-		if not self.checkUser(userID):
+		# Get user info
+		user, ref = self.getUser(ctx)
+		slimes = user['slimes']
+		coins = user['coins']
+		favs = user['favs']
+
+		# Check if they own slimes
+		if not slimes:
 			await ctx.reply('You have no slimes to sell!', delete_after=5)
 			return
 
@@ -875,13 +864,6 @@ class Slimes(commands.Cog, name='Slimes'):
 		if id and len(id) != 8:
 			await ctx.reply('I need a valid ID!', delete_after=5)
 			return
-
-		# Get users slimes
-		ref = self.db.collection(self.collection).document(userID)
-		user = ref.get().to_dict()
-		slimes = user['slimes']
-		coins = user['coins']
-		favs = user['favs']
 
 		# Check if user has slimes
 		if not slimes:
@@ -960,15 +942,8 @@ class Slimes(commands.Cog, name='Slimes'):
 				await ctx.reply('The max range is 1 -> 9999!', delete_after=5)
 				return
 
-		# Check user is registered
-		userID = str(ctx.author.id)
-		if not self.checkUser(userID):
-			await ctx.reply('You have no slimes!', delete_after=5)
-			return
-
 		# Get user information
-		ref = self.db.collection(self.collection).document(userID)
-		user = ref.get().to_dict()
+		user, ref = self.getUser(ctx)
 		slimes = user['slimes']
 		favs = user['favs']
 		coins = int(user['coins'])
@@ -1041,35 +1016,18 @@ class Slimes(commands.Cog, name='Slimes'):
 	@commands.command(brief=desc['balance']['short'], description=desc['balance']['long'], aliases=desc['balance']['alias'])
 	@commands.cooldown(1, desc['balance']['cd'] * _cd, commands.BucketType.user)
 	async def balance(self, ctx):
-		# Check user is registered
-		userID = str(ctx.author.id)
-		if not self.checkUser(userID):
-			await ctx.reply('You have no slimes!', delete_after=5)
-			return
+		user, _ = self.getUser(ctx)
+		coins = int(user['coins'])
 		
-		# Get users coins
-		coins = 0
-		try:
-			ref = self.db.collection(self.collection).document(userID)
-			coins = ref.get().to_dict()['coins']
-		except KeyError:
-			ref.update({'coins': firestore.Increment(0)}) # Set users coins to 0 if they don't have the key in the db
-		
-		await ctx.reply(f'You have **{int(coins)}** :coin:, that\'s worth like {int(coins / SLIME_PRICE)} slime(s)!')
+		await ctx.reply(f'You have **{coins}** :coin:, that\'s worth like {int(coins / SLIME_PRICE)} slime(s)!')
 
 
 	@commands.command(brief=desc['profile']['short'], description=desc['profile']['long'], aliases=desc['profile']['alias'])
 	@commands.cooldown(1, desc['profile']['cd'] * _cd, commands.BucketType.user)
 	async def profile(self, ctx):
-		# Check user is registered
-		userID = str(ctx.author.id)
-		if not self.checkUser(userID, ctx.author):
-			await ctx.reply('You have no slimes!', delete_after=5)
-			return
+		user, ref = self.getUser(ctx)
 		
 		# Get user data
-		ref = self.db.collection(self.collection).document(userID)
-		user = ref.get().to_dict()
 		slimes = user['slimes']
 		coins = int(user['coins'])
 		favs = user['favs']
@@ -1108,14 +1066,13 @@ class Slimes(commands.Cog, name='Slimes'):
 	@commands.command(brief=desc['level']['short'], description=desc['level']['long'], aliases=desc['level']['alias'])
 	@commands.cooldown(1, desc['level']['cd'] * _cd, commands.BucketType.user)
 	async def level(self, ctx):
-		# Check user is registered
-		userID = str(ctx.author.id)
-		if not self.checkUser(userID):
+		user, _ = self.getUser(ctx)
+		slimes = user['slimes']
+		if not slimes:
 			await ctx.reply('Generate a slime to start getting EXP!', delete_after=5)
 			return
 
-		ref = self.db.collection(self.collection).document(userID)
-		exp = ref.get().to_dict()['exp']
+		exp = user['exp']
 		level, toNext = self.calculateLevel(exp)
 
 		# Build line of progress
@@ -1136,9 +1093,9 @@ class Slimes(commands.Cog, name='Slimes'):
 	@commands.command(brief=desc['reset']['short'], description=desc['reset']['long'], aliases=desc['reset']['alias'])
 	@commands.cooldown(1, desc['reset']['cd'] * _cd, commands.BucketType.user)
 	async def reset(self, ctx):
-		# Check user is registered
-		userID = str(ctx.author.id)
-		if not self.checkUser(userID):
+		user, ref = self.getUser(ctx)
+		slimes = user['slimes']
+		if not slimes:
 			await ctx.reply('You have nothing to reset!', delete_after=5)
 			return
 
@@ -1155,19 +1112,14 @@ class Slimes(commands.Cog, name='Slimes'):
 			return
 		else:
 			if reaction.emoji == buttons[0]:
-				ref = self.db.collection(self.collection).document(userID)
 
 				# Reset slimes stored on server
-				slimes = ref.get().to_dict()['slimes']
 				if slimes:
 					allSlimes = os.listdir(self.outputDir)
 					for slime in slimes:
 						for f in allSlimes:
 							if os.path.isfile(self.outputDir + f) and f[:f.rfind('.')] == slime:
 								os.remove(self.outputDir + f)
-				
-				# TODO: Reset slimes stored in firebase storage
-				# ...
 
 				# Remove user document in database and respond
 				ref.delete()

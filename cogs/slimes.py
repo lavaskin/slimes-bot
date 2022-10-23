@@ -302,14 +302,23 @@ class Slimes(commands.Cog, name='Slimes'):
 		percent = int(round((level - lo) * 100, 2))
 		return lo, percent
 
-	def getRanchPrice(self, value) -> int:
+	def checkID(self, id: str) -> bool:
+		validChars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+		if len(id) != 8:
+			return False
+		for i in id:
+			if i not in validChars:
+				return False
+		return True
+
+	def getRanchPrice(self, value: int) -> int:
 		return int(value / (1 - RANCH_RATIO))
 
 	def sendToRanch(self, slimes: list):
 		ranchRef = self.db.collection(self.collection).document('ranch')
 		ranchRef.update({'slimes': firestore.ArrayUnion(slimes)})
 
-	def removeFromRanch(self, id, ref):
+	def removeFromRanch(self, id: str, ref: firestore.DocumentReference):
 		ranchRef = self.db.collection(self.collection).document('ranch')
 		ranchRef.update({'slimes': firestore.ArrayRemove([id])})
 
@@ -529,7 +538,7 @@ class Slimes(commands.Cog, name='Slimes'):
 	@commands.cooldown(1, desc['view']['cd'] * _cd, commands.BucketType.user)
 	async def view(self, ctx, id=None):
 		# Check if given id is valid (incredibly insecure)
-		if not id or len(id) != 8:
+		if not self.checkID(id):
 			await ctx.reply('I need a valid ID!', delete_after=5)
 			return
 
@@ -735,7 +744,12 @@ class Slimes(commands.Cog, name='Slimes'):
 		if not id:
 			# Use most recently generated slime as id
 			id = slimes[-1]
-		elif id not in slimes:
+
+		# Check parameter validity
+		if not self.checkID(id):
+			await ctx.reply('Invalid slime ID!', delete_after=5)
+			return
+		if id not in slimes:
 			await ctx.reply('You don\'t own this slime!', delete_after=5)
 			return
 
@@ -778,8 +792,8 @@ class Slimes(commands.Cog, name='Slimes'):
 		_, ref = self.getUser(ctx, userID)
 
 		# Check for a valid ID
-		if len(id) != 8:
-			await ctx.reply('ID\'s are 8 characters.')
+		if not self.checkID(id):
+			await ctx.reply('Invalid ID!', delete_after=5)
 			return
 		
 		# Generate slime and get id
@@ -806,7 +820,7 @@ class Slimes(commands.Cog, name='Slimes'):
 	@commands.cooldown(1, desc['rarity']['cd'] * _cd, commands.BucketType.user)
 	async def rarity(self, ctx, id=None):
 		# Check if given id is valid
-		if not id or len(id) != 8:
+		if not self.checkID(id):
 			await ctx.reply('I need a valid ID!', delete_after=5)
 			return
 
@@ -872,13 +886,8 @@ class Slimes(commands.Cog, name='Slimes'):
 			return
 
 		# Check if id is valid
-		if id and len(id) != 8:
+		if not self.checkID(id):
 			await ctx.reply('I need a valid ID!', delete_after=5)
-			return
-
-		# Check if user has slimes
-		if not slimes:
-			await ctx.reply('You have no slimes to sell!', delete_after=5)
 			return
 
 		# No id is provided
@@ -1096,10 +1105,15 @@ class Slimes(commands.Cog, name='Slimes'):
 		embed.add_field(name='Progress', value=f'{progressBar}')
 		await ctx.reply(embed=embed)
 
-	# @commands.command(brief=desc['adopt']['short'], description=desc['adopt']['long'], aliases=desc['adopt']['alias'])
-	# @commands.cooldown(1, desc['adopt']['cd'] * _cd, commands.BucketType.user)
-	# async def adopt(self, ctx, id=None):
-	# 	user, ref = self.getUser(ctx)
+	@commands.command(brief=desc['adopt']['short'], description=desc['adopt']['long'], aliases=desc['adopt']['alias'])
+	@commands.cooldown(1, desc['adopt']['cd'] * _cd, commands.BucketType.user)
+	async def adopt(self, ctx, id=None):
+		user, ref = self.getUser(ctx)
+
+		# Check if the id's valid
+		if not self.checkID(id):
+			await ctx.reply('Invalid ID!', delete_after=5)
+			return
 
 	@commands.command(brief=desc['reset']['short'], description=desc['reset']['long'], aliases=desc['reset']['alias'])
 	@commands.cooldown(1, desc['reset']['cd'] * _cd, commands.BucketType.user)

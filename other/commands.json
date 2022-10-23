@@ -112,10 +112,17 @@
 		"alias": ["l", "lvl", "exp", "xp"]
 	},
 
+	"adopt": {
+		"short": "Adopts the given slime",
+		"long": "Adopts a slime from the ranch. This slime is now owned by the command user if they can afford it!\n\nCooldown: 15 seconds",
+		"cd": 15,
+		"alias": ["a"]
+	},
+
 	"reset": {
 		"short": "Completely resets your account",
-		"long": "WARNING: Only do this with 100% certainty. There are no reversals.\n\nWipes all your slimes from the server and resets your account.\n\nCooldown: 24 hours",
-		"cd": 86400,
+		"long": "WARNING: Only do this with 100% certainty. There are no reversals.\n\nWipes all your slimes from the server and resets your account.\n\nCooldown: 48 hours",
+		"cd": 172800,
 		"alias": []
 	}
 }

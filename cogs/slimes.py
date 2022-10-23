@@ -24,6 +24,7 @@ ID_HAT          = 7
 # Shop Constants
 SLIME_PRICE   = 10
 SELLING_RATIO = 1 # Amount to remove from price when selling
+RANCH_RATIO   = 0.1 # Increase in price of slimes bought from the ranch
 
 # Load Descriptions File
 descFile = open('./other/commands.json')
@@ -92,7 +93,7 @@ class Slimes(commands.Cog, name='Slimes'):
 		
 		if not rawUser.exists:
 			# Create new user. If no author provided, use ID
-			data = {'tag': str(ctx.author), 'slimes': [], 'favs': [], 'coins': 100, 'pfp': '', 'selling': [], 'lastclaim': 0}
+			data = {'tag': str(ctx.author), 'slimes': [], 'favs': [], 'coins': 100, 'exp': 0, 'pfp': '', 'selling': [], 'lastclaim': 0}
 			ref.set(data)
 
 			# Re-fetch user and return
@@ -295,12 +296,22 @@ class Slimes(commands.Cog, name='Slimes'):
 		return payout, None
 
 	# Returns the users level given their xp, and their % to the next level
-	def calculateLevel(self, xp):
+	def calculateLevel(self, xp) -> tuple:
 		level = round((0.25 * math.sqrt(xp)) + 1, 2)
 		lo = math.floor(level)
 		percent = int(round((level - lo) * 100, 2))
 		return lo, percent
 
+	def getRanchPrice(self, value) -> int:
+		return int(value / (1 - RANCH_RATIO))
+
+	def sendToRanch(self, slimes: list):
+		ranchRef = self.db.collection(self.collection).document('ranch')
+		ranchRef.update({'slimes': firestore.ArrayUnion(slimes)})
+
+	def removeFromRanch(self, id, ref):
+		ranchRef = self.db.collection(self.collection).document('ranch')
+		ranchRef.update({'slimes': firestore.ArrayRemove([id])})
 
 	########################
 	# Generation Functions #
@@ -600,7 +611,7 @@ class Slimes(commands.Cog, name='Slimes'):
 
 		while True:
 			try:
-				reaction, _ = await self.bot.wait_for("reaction_add", check=lambda reaction, user: user == ctx.author and reaction.emoji in buttons, timeout=10.0)
+				reaction, _ = await self.bot.wait_for('reaction_add', check=lambda reaction, user: user == ctx.author and reaction.emoji in buttons, timeout=10.0)
 			except asyncio.TimeoutError:
 				return
 			else:
@@ -912,8 +923,8 @@ class Slimes(commands.Cog, name='Slimes'):
 				s = 's' if value > 1 else ''
 				await msg.edit(content=f'**{id}** was sold for {value} coin{s} (*New Balance: {int(coins + value)}*)!')
 
-				# Remove the image from the server
-				os.remove(path)
+				# Send the slime to the ranch
+				self.sendToRanch([id])
 
 			# Don't sell
 			elif response.emoji == buttons[1]:
@@ -1006,10 +1017,8 @@ class Slimes(commands.Cog, name='Slimes'):
 
 				await msg.edit(content=f'**{len(toSell)}** slime(s) were sold for {saleValue} coin(s) (*New Balance: {coins + saleValue}*)!')
 
-				# Remove the images from the server
-				for slime in toSell:
-					path = f'{self.outputDir}{slime}.png'
-					os.remove(path)
+				# Send the slimes to the ranch
+				self.sendToRanch(toSell)
 			elif reaction.emoji == buttons[1]:
 				await msg.edit(content='Your slimes are safe!')
 
@@ -1045,7 +1054,7 @@ class Slimes(commands.Cog, name='Slimes'):
 			averageRarity += rarity
 			totalValue += value
 
-		averageRarity /= len(slimes)
+		averageRarity = averageRarity / len(slimes) if len(slimes) > 0 else 0
 		averageRarity = round(averageRarity, 1)
 
 		# Update tag in db
@@ -1060,7 +1069,7 @@ class Slimes(commands.Cog, name='Slimes'):
 		embed.add_field(name='Number of Favorites', value=f'{len(favs)}')
 		embed.add_field(name='Total Value', value=f'{math.ceil(totalValue)} :coin:')
 		embed.add_field(name='Average Rarity', value=f'{averageRarity}')
-		embed.add_field(name='Rarest Slime', value=f'{highestRarity[0]} ({highestRarity[1]})')
+		if highestRarity[0]: embed.add_field(name='Rarest Slime', value=f'{highestRarity[0]} ({highestRarity[1]})')
 		await ctx.reply(embed=embed)
 
 	@commands.command(brief=desc['level']['short'], description=desc['level']['long'], aliases=desc['level']['alias'])
@@ -1075,13 +1084,10 @@ class Slimes(commands.Cog, name='Slimes'):
 		exp = user['exp']
 		level, toNext = self.calculateLevel(exp)
 
-		# Build line of progress
-
 		# Get the number of full bars
 		fullBars = int(toNext / 10)
 		emptyBars = 10 - fullBars
 		progressBar = ':green_square:' * fullBars + ':white_large_square:' * emptyBars
-
 
 		# Build response
 		embed = discord.Embed(title=f'{ctx.author.name}\'s Level', color=discord.Color.green())
@@ -1089,6 +1095,11 @@ class Slimes(commands.Cog, name='Slimes'):
 		embed.add_field(name='EXP', value=f'{toNext}%')
 		embed.add_field(name='Progress', value=f'{progressBar}')
 		await ctx.reply(embed=embed)
+
+	# @commands.command(brief=desc['adopt']['short'], description=desc['adopt']['long'], aliases=desc['adopt']['alias'])
+	# @commands.cooldown(1, desc['adopt']['cd'] * _cd, commands.BucketType.user)
+	# async def adopt(self, ctx, id=None):
+	# 	user, ref = self.getUser(ctx)
 
 	@commands.command(brief=desc['reset']['short'], description=desc['reset']['long'], aliases=desc['reset']['alias'])
 	@commands.cooldown(1, desc['reset']['cd'] * _cd, commands.BucketType.user)

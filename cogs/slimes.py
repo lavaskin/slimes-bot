@@ -24,7 +24,7 @@ ID_HAT          = 7
 # Shop Constants
 SLIME_PRICE   = 10
 SELLING_RATIO = 1 # Amount to remove from price when selling
-RANCH_RATIO   = 0.1 # Increase in price of slimes bought from the ranch
+RANCH_RATIO   = 3 # Increase in price of slimes bought from the ranch
 
 # Load Descriptions File
 descFile = open('./other/commands.json')
@@ -312,13 +312,18 @@ class Slimes(commands.Cog, name='Slimes'):
 		return True
 
 	def getRanchPrice(self, value: int) -> int:
-		return int(value / (1 - RANCH_RATIO))
+		return math.ceil(value * RANCH_RATIO)
 
 	def sendToRanch(self, slimes: list):
 		ranchRef = self.db.collection(self.collection).document('ranch')
 		ranchRef.update({'slimes': firestore.ArrayUnion(slimes)})
 
-	def removeFromRanch(self, id: str, ref: firestore.DocumentReference):
+	def checkIfInRanch(self, slime: str) -> bool:
+		ranchRef = self.db.collection(self.collection).document('ranch')
+		ranch = ranchRef.get().to_dict()['slimes']
+		return slime in ranch
+
+	def removeFromRanch(self, id: str):
 		ranchRef = self.db.collection(self.collection).document('ranch')
 		ranchRef.update({'slimes': firestore.ArrayRemove([id])})
 
@@ -1114,6 +1119,42 @@ class Slimes(commands.Cog, name='Slimes'):
 		if not self.checkID(id):
 			await ctx.reply('Invalid ID!', delete_after=5)
 			return
+
+		# Check if in ranch
+		if not self.checkIfInRanch(id):
+			await ctx.reply(f'**{id}** isn\'t in the ranch!', delete_after=5)
+			return
+		
+		price = self.getRanchPrice(self.getRarity(id)[2])
+		coins = int(user['coins'])
+		if coins < price:
+			await ctx.reply(f'You don\'t have enough coins to adopt that slime! ({price} :coin:)', delete_after=5)
+			return
+		
+		# Make yes/no buttons for confirmation
+		buttons = ['✔️', '❌']
+		path = f'{self.outputDir}{id}.png'
+		file = discord.File(path)
+		msg = await ctx.reply(f'Are you sure you want to adopt **{id}** for {price} :coin:?', file=file)
+		for button in buttons:
+			await msg.add_reaction(button)
+		
+		# Wait for a response
+		try:
+			reaction, user = await self.bot.wait_for('reaction_add', timeout=30, check=lambda reaction, user: user == ctx.author and str(reaction.emoji) in buttons)
+		except asyncio.TimeoutError:
+			return
+		else:
+			# Reject adoption
+			if str(reaction.emoji) == buttons[1]:
+				await ctx.reply(f'Decided to not adopt *{id}*...', delete_after=5)
+
+			# Adopt the slime
+			elif str(reaction.emoji) == buttons[0]:
+				# Update db
+				ref.update({'coins': coins - price, 'slimes': firestore.ArrayUnion([id])})
+				self.removeFromRanch(id)
+				await ctx.reply(f'You adopted **{id}**!', delete_after=5)
 
 	@commands.command(brief=desc['reset']['short'], description=desc['reset']['long'], aliases=desc['reset']['alias'])
 	@commands.cooldown(1, desc['reset']['cd'] * _cd, commands.BucketType.user)

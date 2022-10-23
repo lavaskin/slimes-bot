@@ -23,9 +23,9 @@ async def on_command_error(ctx, error):
 	if isinstance(error, commands.CommandOnCooldown):
 		# Check if more than 2 minutes remaining
 		if error.retry_after < 121:
-			await ctx.reply('You can use this command again in *{0} seconds*.'.format(int(error.retry_after)), delete_after=5)
+			await ctx.reply(f'You can use this command again in *{int(error.retry_after)} seconds*.', delete_after=5)
 		else:
-			await ctx.reply('You can use this command again in *{0} minutes*.'.format(int(error.retry_after / 60)), delete_after=5)
+			await ctx.reply(f'You can use this command again in *{int(error.retry_after / 60)} minutes*.', delete_after=5)
 	if isinstance(error, commands.CommandNotFound):
 		await ctx.reply('That command doesn\'t exist!')
 

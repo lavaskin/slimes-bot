@@ -287,8 +287,7 @@ class Slimes(commands.Cog, name='Slimes'):
 		multiplier = max(round(1 - round((coins / 1000) * 0.1, 3), 3), 0.1) if coins > 500 else 1
 		payout = math.ceil(payout * multiplier)
 
-		ref.update({'coins': firestore.Increment(payout)})
-		ref.update({'lastclaim': time.time()})
+		ref.update({'coins': firestore.Increment(payout), 'lastclaim': time.time()})
 		return payout, None
 
 	# Returns the users level given their xp, and their % to the next level
@@ -927,8 +926,7 @@ class Slimes(commands.Cog, name='Slimes'):
 		else:
 			# Sell the slime
 			if response.emoji == buttons[0]:
-				ref.update({'slimes': firestore.ArrayRemove([id])})
-				ref.update({'coins': firestore.Increment(value)})
+				ref.update({'slimes': firestore.ArrayRemove([id]) ,'coins': firestore.Increment(value)})
 				s = 's' if value > 1 else ''
 				await msg.edit(content=f'**{id}** was sold for {value} coin{s} (*New Balance: {int(coins + value)}*)!')
 
@@ -1029,8 +1027,7 @@ class Slimes(commands.Cog, name='Slimes'):
 		else:
 			if reaction.emoji == buttons[0]:
 				# Sell slimes
-				ref.update({'slimes': firestore.ArrayRemove(toSell)})
-				ref.update({'coins': firestore.Increment(saleValue)})
+				ref.update({'slimes': firestore.ArrayRemove(toSell), 'coins': firestore.Increment(saleValue)})
 
 				await msg.edit(content=f'**{len(toSell)}** slime(s) were sold for {saleValue} coin(s) (*New Balance: {coins + saleValue}*)!')
 

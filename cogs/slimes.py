@@ -303,6 +303,8 @@ class Slimes(commands.Cog, name='Slimes'):
 		return lo, percent
 
 	def checkID(self, id: str) -> bool:
+		if not id: return False
+
 		validChars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 		if len(id) != 8:
 			return False
@@ -313,6 +315,10 @@ class Slimes(commands.Cog, name='Slimes'):
 
 	def getRanchPrice(self, value: int) -> int:
 		return math.ceil(value * RANCH_RATIO)
+
+	def getSlimesInRanch(self) -> list:
+		ranchRef = self.db.collection(self.collection).document('ranch')
+		return ranchRef.get().to_dict()['slimes']
 
 	def sendToRanch(self, slimes: list):
 		ranchRef = self.db.collection(self.collection).document('ranch')
@@ -326,6 +332,40 @@ class Slimes(commands.Cog, name='Slimes'):
 	def removeFromRanch(self, id: str):
 		ranchRef = self.db.collection(self.collection).document('ranch')
 		ranchRef.update({'slimes': firestore.ArrayRemove([id])})
+
+	def buildPages(self, slimes: list, filter: str, title: str, url='') -> list:
+		if not slimes: return []
+
+		# Filter slimes
+		filtered = []
+		if filter:
+			for slime in slimes:
+				if self.passesFilter(filter, slime):
+					filtered.append(slime)
+		else:
+			filtered = slimes
+
+		# Check if there are any slimes that match the filter
+		if not filtered: return []
+
+		# Put into pages of embeds
+		pages = []
+		perPage = 10
+		numPages = math.ceil(len(filtered) / perPage)
+		for i in range(numPages):
+			# Slice array for page
+			page = []
+			max = ((i * perPage) + perPage) if (i != numPages - 1) else len(filtered)
+			if i != numPages - 1:
+				page = filtered[i * perPage:(i * perPage) + perPage]
+			else:
+				page = filtered[i * perPage:]
+			# Setup pages embed
+			embed=discord.Embed(title=title, description=self.formatList(page, '\n'), url=url, color=discord.Color.green())
+			embed.set_footer(text=f'Slimes {(i * perPage) + 1}-{max} of {len(filtered)}...')
+			pages.append(embed)
+
+		return pages
 
 	########################
 	# Generation Functions #
@@ -455,9 +495,9 @@ class Slimes(commands.Cog, name='Slimes'):
 	async def generate(self, ctx, count=1):
 		user, ref = self.getUser(ctx)
 
-		# Check if count is between 1 and 9
-		if int(count) < 1 or int(count) > 9:
-			await ctx.reply('You can only generate between 1 and 9 slimes at a time.', delete_after=5)
+		# Check if count is between 1 and 99
+		if int(count) < 1 or int(count) > 99:
+			await ctx.reply('You can only generate between 1 and 99 slimes at a time.', delete_after=5)
 			return
 
 		# Check if user has enough coins
@@ -489,9 +529,11 @@ class Slimes(commands.Cog, name='Slimes'):
 			slimes.append(generatedSlime)
 			totalRarity += self.getRarity(generatedSlime[1])[1]
 
-		# Add slime to the database
+		# Add slimes to the database
+		slimeIDs = []
 		for slime in slimes:
-			ref.update({'slimes': firestore.ArrayUnion([slime[1]])})
+			slimeIDs.append(slime[1])
+		ref.update({'slimes': firestore.ArrayUnion(slimeIDs)})
 
 		# Update balance
 		ref.update({'coins': firestore.Increment(-SLIME_PRICE * count)})
@@ -511,13 +553,18 @@ class Slimes(commands.Cog, name='Slimes'):
 		
 		# Multiple slimes response
 		else:
+			# Sort slimes by rarity and get top 9 (only if amount generated > 9)
+			if (len(slimeIDs) > 9):
+				slimeIDs.sort(key=lambda x: self.getRarity(x)[1], reverse=True)
+				slimeIDs = slimeIDs[:9]
+
 			# Make collage of generated slimes
-			slimeIDs = [id for _, id in slimes]
 			collage = self.makeCollage(ctx, slimeIDs)
 
 			# Make embed and send it
 			file = discord.File(collage)
-			embed = discord.Embed(title=f'Generated {count} slimes', description=desc + balance, color=discord.Color.green())
+			titleAddendum = '' if len(slimes) < 10 else ' (Top 9)'
+			embed = discord.Embed(title=f'Generated {count} slimes{titleAddendum}', description=desc + balance, color=discord.Color.green())
 			await ctx.reply(embed=embed, file=file)
 			os.remove(collage)
 
@@ -528,7 +575,10 @@ class Slimes(commands.Cog, name='Slimes'):
 
 		# If the user leveled up, send a message and give them coins based on the new level
 		if newLevel > oldLevel:
-			levelBonus = min(int((newLevel * 0.5) * 100), 500)
+			# Calc the amount to give accounting for multiple level-ups with one pull
+			levelBonus = 0
+			for i in range(oldLevel, newLevel):
+				levelBonus += min(int((i * 0.5) * 100), 500)
 			ref.update({'coins': firestore.Increment(levelBonus)})
 			await ctx.reply(f'You leveled up to **Level {newLevel}**! Here\'s **{levelBonus}** :coin: as a bonus!')
 
@@ -561,68 +611,34 @@ class Slimes(commands.Cog, name='Slimes'):
 	@commands.command(brief=desc['inventory']['short'], description=desc['inventory']['long'], aliases=desc['inventory']['alias'])
 	@commands.cooldown(1, desc['inventory']['cd'] * _cd, commands.BucketType.user)
 	async def inventory(self, ctx, filter=None):
-		perPage = 10
 		user, _ = self.getUser(ctx)
-
-		# Check if user even has slimes
 		slimes = user['slimes']
-		if not slimes:
-			await ctx.reply('You have no slimes!', delete_after=5)
+
+		if filter and len(filter) != 8:
+			await ctx.reply('Invalid filter!', delete_after=5)
 			return
-
-		# Filter slimes
-		filtered = []
-		if filter:
-			if len(filter) == 8:
-				for slime in slimes:
-					if self.passesFilter(filter, slime):
-						filtered.append(slime)
-			else:
-				await ctx.reply('Incorrect filter!', delete_after=5)
-				return
-		else:
-			filtered = slimes
-
-		# Check if there are any slimes that match the filter
-		if not filtered:
-			await ctx.reply('No slimes you own match that filter!', delete_after=5)
-			return
-
+		
 		# Create the URL to the site
 		siteAdd = self.siteLink + f'inventory/{ctx.author.id}'
 		siteAdd = siteAdd + '?filter=' + filter if filter else siteAdd
 
-		# Only post one page if less than listing amount
+		# Build the username
 		username = str(ctx.author)[:str(ctx.author).rfind('#')]
-		if len(filtered) <= perPage:
-			embed = embed=discord.Embed(title=f'{username}\'s Inventory', description=self.formatList(filtered, '\n'), url=siteAdd, color=discord.Color.green())
-			embed.set_footer(text=f'{len(filtered)} slime(s)...')
-			await ctx.reply(embed=embed)
-			return
 
 		# Put into pages of embeds
-		pages = []
-		numPages = math.ceil(len(filtered) / perPage)
-		for i in range(numPages):
-			# Slice array for page
-			page = []
-			max = ((i * perPage) + perPage) if (i != numPages - 1) else len(filtered)
-			if i != numPages - 1:
-				page = filtered[i * perPage:(i * perPage) + perPage]
-			else:
-				page = filtered[i * perPage:]
-			# Setup pages embed
-			embed=discord.Embed(title=f'{username}\'s Inventory', description=self.formatList(page, '\n'), url=siteAdd, color=discord.Color.green())
-			embed.set_footer(text=f'Slimes {(i * perPage) + 1}-{max} of {len(filtered)}...')
-			pages.append(embed)
+		pages = self.buildPages(slimes, filter, f'{username}\'s Inventory', siteAdd)
+
+		if not pages:
+			await ctx.reply('No slimes available!', delete_after=5)
+			return
 
 		# Setup embed for reactions
-		cur = 0
-		msg = await ctx.reply(embed=pages[cur])
+		msg = await ctx.reply(embed=pages[0])
 		buttons = ['⏮️', '⬅️', '➡️', '⏭️']
 		for button in buttons:
 			await msg.add_reaction(button)
 
+		cur = 0
 		while True:
 			try:
 				reaction, _ = await self.bot.wait_for('reaction_add', check=lambda reaction, user: user == ctx.author and reaction.emoji in buttons, timeout=10.0)
@@ -833,7 +849,7 @@ class Slimes(commands.Cog, name='Slimes'):
 		text, score, _ = self.getRarity(id)
 
 		# Send embed response
-		embed = discord.Embed(title=f'{id}\' Rarity', description=text + f' (Score of {score})', color=discord.Color.green())
+		embed = discord.Embed(title=f'{id}\'s Rarity', description=text + f' (Score of {score})', color=discord.Color.green())
 		await ctx.reply(embed=embed)
 
 	@commands.command(brief=desc['rarities']['short'], description=desc['rarities']['long'], aliases=desc['rarities']['alias'])
@@ -1156,6 +1172,52 @@ class Slimes(commands.Cog, name='Slimes'):
 				self.removeFromRanch(id)
 				await ctx.reply(f'You adopted **{id}**!', delete_after=5)
 
+	@commands.command(brief=desc['ranch']['short'], description=desc['ranch']['long'], aliases=desc['ranch']['alias'])
+	@commands.cooldown(1, desc['ranch']['cd'] * _cd, commands.BucketType.user)
+	async def ranch(self, ctx, filter=None):
+		slimes = self.getSlimesInRanch()
+
+		# Check validity of filter
+		if filter and len(filter) != 8:
+			await ctx.reply('Invalid filter!', delete_after=5)
+			return
+
+		pages = self.buildPages(slimes, filter, 'The Ranch')
+
+		if not pages:
+			await ctx.reply('No slimes available!', delete_after=5)
+			return
+
+		# Setup embed for reactions
+		msg = await ctx.reply(embed=pages[0])
+		buttons = ['⏮️', '⬅️', '➡️', '⏭️']
+		for button in buttons:
+			await msg.add_reaction(button)
+
+		cur = 0
+		while True:
+			try:
+				reaction, _ = await self.bot.wait_for('reaction_add', check=lambda reaction, user: user == ctx.author and reaction.emoji in buttons, timeout=10.0)
+			except asyncio.TimeoutError:
+				return
+			else:
+				# Pick next page based on reaction
+				prev = cur
+				if reaction.emoji == buttons[0]:
+					cur = 0
+				if reaction.emoji == buttons[1]:
+					if cur > 0:
+						cur -= 1
+				if reaction.emoji == buttons[2]:
+					if cur < len(pages) - 1:
+						cur += 1
+				if reaction.emoji == buttons[3]:
+					cur = len(pages) - 1
+				for button in buttons:
+					await msg.remove_reaction(button, ctx.author)
+				if cur != prev:
+					await msg.edit(embed=pages[cur])
+
 	@commands.command(brief=desc['reset']['short'], description=desc['reset']['long'], aliases=desc['reset']['alias'])
 	@commands.cooldown(1, desc['reset']['cd'] * _cd, commands.BucketType.user)
 	async def reset(self, ctx):
@@ -1178,6 +1240,8 @@ class Slimes(commands.Cog, name='Slimes'):
 			return
 		else:
 			if reaction.emoji == buttons[0]:
+				# Send all the users slimes to the ranch
+				self.sendToRanch(slimes)
 
 				# Reset slimes stored on server
 				if slimes:

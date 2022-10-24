@@ -119,6 +119,13 @@
 		"alias": ["a"]
 	},
 
+	"ranch": {
+		"short": "Lists all the slimes in the ranch",
+		"long": "Shows a navigatable embed of every slime put in the ranch by date added. The filter must be 8 characters long. A '?' in the filter means anything can be in that slot.\n\nCooldown: 1 minute",
+		"cd": 60,
+		"alias": ["ran"]
+	},
+
 	"reset": {
 		"short": "Completely resets your account",
 		"long": "WARNING: Only do this with 100% certainty. There are no reversals.\n\nWipes all your slimes from the server and resets your account.\n\nCooldown: 48 hours",

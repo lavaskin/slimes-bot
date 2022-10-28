@@ -8,7 +8,7 @@ The bot has an econemy system, use s!claim to claim coins every hour and s!gener
   1. users
   1. users-dev
   1. ...
-- In users and users-dev, create a document called "ranch" with the array field: slimes. This is where sold slimes will be added to.
+- In users and users-dev, create a document called "ranch" with the array fields: slimes, favs. This is where sold slimes will be added to.
 
 ### **How to build the bot**:
 1. Fill out all the relevant information in a '.env' file. Use .env-example.txt as a reference.

@@ -613,6 +613,13 @@ class Slimes(commands.Cog, name='Slimes'):
 	async def inventory(self, ctx, filter=None):
 		user, _ = self.getUser(ctx)
 		slimes = user['slimes']
+		favs = user['favs']
+
+		# Remove favs from slimes, add star to favs
+		for i in range(len(favs)):
+			slimes.remove(favs[i])
+			favs[i] = f':star: {favs[i]}'
+		allSlimes = favs + slimes
 
 		if filter and len(filter) != 8:
 			await ctx.reply('Invalid filter!', delete_after=5)
@@ -626,8 +633,7 @@ class Slimes(commands.Cog, name='Slimes'):
 		username = str(ctx.author)[:str(ctx.author).rfind('#')]
 
 		# Put into pages of embeds
-		pages = self.buildPages(slimes, filter, f'{username}\'s Inventory', siteAdd)
-
+		pages = self.buildPages(allSlimes, filter, f'{username}\'s Inventory', siteAdd)
 		if not pages:
 			await ctx.reply('No slimes available!', delete_after=5)
 			return
@@ -1182,8 +1188,11 @@ class Slimes(commands.Cog, name='Slimes'):
 			await ctx.reply('Invalid filter!', delete_after=5)
 			return
 
-		pages = self.buildPages(slimes, filter, 'The Ranch')
+		# Build ranch URL
+		siteAdd = self.siteLink + f'ranch'
+		siteAdd = siteAdd + '?filter=' + filter if filter else siteAdd
 
+		pages = self.buildPages(slimes, filter, 'The Ranch', siteAdd)
 		if not pages:
 			await ctx.reply('No slimes available!', delete_after=5)
 			return

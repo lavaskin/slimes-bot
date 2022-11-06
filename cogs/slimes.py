@@ -302,10 +302,12 @@ class Slimes(commands.Cog, name='Slimes'):
 		percent = int(round((level - lo) * 100, 2))
 		return lo, percent
 
-	def checkID(self, id: str) -> bool:
+	def checkID(self, id: str, filter=False) -> bool:
 		if not id: return False
 
 		validChars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+		if filter: validChars += '?'
+
 		if len(id) != 8:
 			return False
 		for i in id:
@@ -333,7 +335,7 @@ class Slimes(commands.Cog, name='Slimes'):
 		ranchRef = self.db.collection(self.collection).document('ranch')
 		ranchRef.update({'slimes': firestore.ArrayRemove([id])})
 
-	def buildPages(self, slimes: list, filter: str, title: str, url='') -> list:
+	def filterSlimes(self, slimes: list, filter: str):
 		if not slimes: return []
 
 		# Filter slimes
@@ -345,24 +347,26 @@ class Slimes(commands.Cog, name='Slimes'):
 		else:
 			filtered = slimes
 
-		# Check if there are any slimes that match the filter
-		if not filtered: return []
+		return filtered
+
+	def buildPages(self, slimes: list, title: str, url='') -> list:
+		if not slimes: return []
 
 		# Put into pages of embeds
 		pages = []
 		perPage = 10
-		numPages = math.ceil(len(filtered) / perPage)
+		numPages = math.ceil(len(slimes) / perPage)
 		for i in range(numPages):
 			# Slice array for page
 			page = []
-			max = ((i * perPage) + perPage) if (i != numPages - 1) else len(filtered)
+			max = ((i * perPage) + perPage) if (i != numPages - 1) else len(slimes)
 			if i != numPages - 1:
-				page = filtered[i * perPage:(i * perPage) + perPage]
+				page = slimes[i * perPage:(i * perPage) + perPage]
 			else:
-				page = filtered[i * perPage:]
+				page = slimes[i * perPage:]
 			# Setup pages embed
 			embed=discord.Embed(title=title, description=self.formatList(page, '\n'), url=url, color=discord.Color.green())
-			embed.set_footer(text=f'Slimes {(i * perPage) + 1}-{max} of {len(filtered)}...')
+			embed.set_footer(text=f'Slimes {(i * perPage) + 1}-{max} of {len(slimes)}...')
 			pages.append(embed)
 
 		return pages
@@ -615,15 +619,19 @@ class Slimes(commands.Cog, name='Slimes'):
 		slimes = user['slimes']
 		favs = user['favs']
 
+		# Check if id is valid
+		if filter and not self.checkID(filter, True):
+			await ctx.reply('I need a valid ID!', delete_after=5)
+			return
+
+		# Filter slimes
+		slimes = self.filterSlimes(slimes, filter)
+
 		# Remove favs from slimes, add star to favs
 		for i in range(len(favs)):
 			slimes.remove(favs[i])
 			favs[i] = f':star: {favs[i]}'
 		allSlimes = favs + slimes
-
-		if filter and len(filter) != 8:
-			await ctx.reply('Invalid filter!', delete_after=5)
-			return
 		
 		# Create the URL to the site
 		siteAdd = self.siteLink + f'inventory/{ctx.author.id}'
@@ -633,7 +641,7 @@ class Slimes(commands.Cog, name='Slimes'):
 		username = str(ctx.author)[:str(ctx.author).rfind('#')]
 
 		# Put into pages of embeds
-		pages = self.buildPages(allSlimes, filter, f'{username}\'s Inventory', siteAdd)
+		pages = self.buildPages(allSlimes, f'{username}\'s Inventory', siteAdd)
 		if not pages:
 			await ctx.reply('No slimes available!', delete_after=5)
 			return
@@ -1182,16 +1190,19 @@ class Slimes(commands.Cog, name='Slimes'):
 	async def ranch(self, ctx, filter=None):
 		slimes = self.getSlimesInRanch()
 
-		# Check validity of filter
-		if filter and len(filter) != 8:
-			await ctx.reply('Invalid filter!', delete_after=5)
+		# Check if id is valid
+		if filter and not self.checkID(filter, True):
+			await ctx.reply('I need a valid ID!', delete_after=5)
 			return
+
+		# Filter slimes
+		slimes = self.filterSlimes(slimes, filter)
 
 		# Build ranch URL
 		siteAdd = self.siteLink + f'ranch'
 		siteAdd = siteAdd + '?filter=' + filter if filter else siteAdd
 
-		pages = self.buildPages(slimes, filter, 'The Ranch', siteAdd)
+		pages = self.buildPages(slimes, 'The Ranch', siteAdd)
 		if not pages:
 			await ctx.reply('No slimes available!', delete_after=5)
 			return

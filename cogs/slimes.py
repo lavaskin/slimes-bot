@@ -603,10 +603,9 @@ class Slimes(commands.Cog, name='Slimes'):
 			await ctx.reply(f'You leveled up to **Level {newLevel}**! Here\'s **{levelBonus}** :coin: as a bonus!')
 
 		# Upload slimes to firebase storage (Takes a second, better to do after response is given)
-		bucket = storage.bucket()
 		bucketPath = 'dev/' if _dev else 'prod/'
 		for slime in slimes:
-			blob = bucket.blob(f'{bucketPath}{slime[1]}.png')
+			blob = self.bucket.blob(f'{bucketPath}{slime[1]}.png')
 			blob.upload_from_filename(slime[0])
 
 	@commands.command(brief=desc['view']['short'], description=desc['view']['long'], aliases=desc['view']['alias'])
@@ -862,9 +861,8 @@ class Slimes(commands.Cog, name='Slimes'):
 		await ctx.reply(f'**{id}** was given to **{userID}**!', file=file)
 
 		# Upload slime to firebase storage (Takes a second, better to do after response is given)
-		bucket = storage.bucket()
 		bucketPath = 'dev/' if _dev else 'prod/'
-		blob = bucket.blob(f'{bucketPath}{id}.png')
+		blob = self.bucket.blob(f'{bucketPath}{id}.png')
 		blob.upload_from_filename(path)
 
 	@commands.command(brief=desc['rarity']['short'], description=desc['rarity']['long'], aliases=desc['rarity']['alias'])

@@ -22,6 +22,7 @@ ID_EYES         = 5
 ID_MOUTH        = 6
 ID_HAT          = 7
 ID_SIDE         = 8
+ID_LENGTH       = 9 # UPDATE AS NEEDED
 # Shop Constants
 SLIME_PRICE   = 10
 SELLING_RATIO = 1 # Amount to remove from price when selling
@@ -126,6 +127,9 @@ class Slimes(commands.Cog, name='Slimes'):
 
 		# Check if it has a hat
 		if id[ID_HAT] != 'z': score += 1
+
+		# Check if it has a side
+		if id[ID_SIDE] != 'z': score += 2
 
 		if score == 0:
 			text = 'This is an **extremely ordinary** slime!'
@@ -310,11 +314,11 @@ class Slimes(commands.Cog, name='Slimes'):
 		validChars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 		if filter: validChars += '?'
 
-		if len(id) != 8:
-			return False
+		if len(id) != ID_LENGTH: return False
+
 		for i in id:
-			if i not in validChars:
-				return False
+			if i not in validChars: return False
+
 		return True
 
 	def getRanchPrice(self, value: int) -> int:
@@ -409,6 +413,10 @@ class Slimes(commands.Cog, name='Slimes'):
 		if splitID[ID_HAT] != 'z':
 			layers.append((f'{self.partsDir}hats/{splitID[ID_HAT]}.png', True))
 
+		# id[8] = side
+		if splitID[ID_SIDE] != 'z':
+			layers.append((f'{self.partsDir}sides/{splitID[ID_SIDE]}.png', True))
+
 		return layers
 
 	# Based on random parameters, generates a slime ID
@@ -454,6 +462,12 @@ class Slimes(commands.Cog, name='Slimes'):
 			# Hat
 			if self.passesParam('hat'):
 				roll = random.randrange(0, self.hats)
+				id += self.encodeNum(roll)
+			else: id += 'z'
+
+			# Side
+			if self.passesParam('side'):
+				roll = random.randrange(0, self.sides)
 				id += self.encodeNum(roll)
 			else: id += 'z'
 

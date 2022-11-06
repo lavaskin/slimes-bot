@@ -4,5 +4,6 @@
 	"body_special": 0.10,
 	"eyes": 0.97,
 	"mouth": 0.75,
-	"hat": 0.70
+	"hat": 0.70,
+	"side": 0.33
 }

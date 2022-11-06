@@ -21,6 +21,7 @@ ID_BODY         = 4
 ID_EYES         = 5
 ID_MOUTH        = 6
 ID_HAT          = 7
+ID_SIDE         = 8
 # Shop Constants
 SLIME_PRICE   = 10
 SELLING_RATIO = 1 # Amount to remove from price when selling
@@ -76,6 +77,7 @@ class Slimes(commands.Cog, name='Slimes'):
 		self.eyes          = countFiles(self.partsDir + 'face/eyes/')
 		self.mouths        = countFiles(self.partsDir + 'face/mouths/')
 		self.hats          = countFiles(self.partsDir + 'hats/')
+		self.sides         = countFiles(self.partsDir + 'sides/')
 		random.seed()
 		print(' > Finished initial setup.')
 

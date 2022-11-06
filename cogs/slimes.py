@@ -912,11 +912,6 @@ class Slimes(commands.Cog, name='Slimes'):
 			await ctx.reply('You have no slimes to sell!', delete_after=5)
 			return
 
-		# Check if id is valid
-		if not self.checkID(id):
-			await ctx.reply('I need a valid ID!', delete_after=5)
-			return
-
 		# No id is provided
 		if not id:
 			# Select most recent slime if no id is given
@@ -928,6 +923,10 @@ class Slimes(commands.Cog, name='Slimes'):
 		
 		# They provide an id...
 		else:
+			# Check if id is valid
+			if not self.checkID(id):
+				await ctx.reply('I need a valid ID!', delete_after=5)
+				return
 			# Check if they own it
 			if id not in slimes:
 				await ctx.reply('You don\'t own that slime!', delete_after=5)

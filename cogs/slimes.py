@@ -641,6 +641,7 @@ class Slimes(commands.Cog, name='Slimes'):
 
 		# Filter slimes
 		slimes = self.filterSlimes(slimes, filter)
+		favs = self.filterSlimes(favs, filter)
 
 		# Remove favs from slimes, add star to favs
 		for i in range(len(favs)):

@@ -8,7 +8,7 @@
 
 	"generate": {
 		"short": "Generates a new slime",
-		"long": "Creates a unique slime and replies to the user with it. This slime is now owned by the command user!\n\nCost: 10 coins\nCooldown: 15 seconds",
+		"long": "Creates a unique slime and replies to the user with it. This slime is now owned by the command user!\nYou can generate 1 -> 99 at once, or use \"max\" to generate the most you can!\n\nCost: 10 coins\nCooldown: 15 seconds",
 		"cd": 15,
 		"alias": ["g", "gen"]
 	},

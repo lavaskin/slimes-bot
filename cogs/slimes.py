@@ -114,10 +114,10 @@ class Slimes(commands.Cog, name='Slimes'):
 
 		# Check background (solid is 0, stripes is 1 and special is 4)
 		if id[ID_BG_VARIENT] == '1': score += 1
-		elif id[ID_BG_VARIENT] == '2': score += 6
+		elif id[ID_BG_VARIENT] == '2': score += 8
 
 		# Check if body is special
-		if id[ID_BODY_VARIENT] == '1': score += 8
+		if id[ID_BODY_VARIENT] == '1': score += 6
 
 		# Check if the slime doesn't have eyes
 		if id[ID_EYES] == 'z': score += 9
@@ -129,7 +129,7 @@ class Slimes(commands.Cog, name='Slimes'):
 		if id[ID_HAT] != 'z': score += 1
 
 		# Check if it has a side
-		if id[ID_SIDE] != 'z': score += 2
+		if id[ID_SIDE] != 'z': score += 3
 
 		if score == 0:
 			text = 'This is an **extremely ordinary** slime!'
@@ -244,7 +244,7 @@ class Slimes(commands.Cog, name='Slimes'):
 		userID = ctx.author.id
 		numFavs = len(slimes)
 		font = ImageFont.truetype(self.fontPath, 20)
-		fontLen,  _ = font.getsize('#' + slimes[0])
+		fontLen,  _ = font.getsize(slimes[0])
 		width = (3 * self.width) if numFavs > 2 else numFavs * self.width
 		height = math.ceil(numFavs / 3) * self.height
 		n = 0
@@ -303,7 +303,7 @@ class Slimes(commands.Cog, name='Slimes'):
 
 	# Returns the users level given their xp, and their % to the next level
 	def calculateLevel(self, xp) -> tuple:
-		level = round((0.25 * math.sqrt(xp)) + 1, 2)
+		level = round( (0.3 * math.sqrt(xp)) + 1, 2)
 		lo = math.floor(level)
 		percent = int(round((level - lo) * 100, 2))
 		return lo, percent
@@ -512,18 +512,27 @@ class Slimes(commands.Cog, name='Slimes'):
 
 	@commands.command(brief=desc['generate']['short'], description=desc['generate']['long'], aliases=desc['generate']['alias'])
 	@commands.cooldown(1, desc['generate']['cd'] * _cd, commands.BucketType.user)
-	async def generate(self, ctx, count=1):
+	async def generate(self, ctx, count=None):
 		user, ref = self.getUser(ctx)
 
-		# Check if count is between 1 and 99
-		if int(count) < 1 or int(count) > 99:
+		if count == None: count = 1 # Used instead of a default arg so more types can be used for count
+
+		# Check if count is a number
+		try:
+			if count != 'max': count = int(count)
+		except:
+			await ctx.reply('Invalid count. Must be a number or "max"', delete_after=5)
+			return
+
+		# Check if count is between 1 and 99, and if it's a number
+		if count != 'max' and (count < 1 or count > 99):
 			await ctx.reply('You can only generate between 1 and 99 slimes at a time.', delete_after=5)
 			return
 
 		# Check if user has enough coins
 		coins = user['coins']
 		desc = ''
-		if coins < SLIME_PRICE * count:
+		if count != 'max' and (coins < SLIME_PRICE * count):
 			# Try to claim coins
 			payout, err = self.claimCoins(ref, user)
 			if err != None:
@@ -538,8 +547,8 @@ class Slimes(commands.Cog, name='Slimes'):
 				coins = user['coins'] + payout
 		
 		# Change count to the amount the user can afford
-		if coins < SLIME_PRICE * count:
-			count = int(coins / SLIME_PRICE)
+		if count == 'max' or (coins < SLIME_PRICE * count):
+			count = min(int(coins / SLIME_PRICE), 99)
 
 		# Generate slimes
 		slimes = []

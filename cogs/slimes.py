@@ -257,7 +257,7 @@ class Slimes(commands.Cog, name='Slimes'):
 				if n < numFavs:
 					img = Image.open(f'{self.outputDir}{slimes[n]}.png')
 					combined.paste(img, (x, y))
-					draw.text(((x + self.width) - fontLen, y), f"#{slimes[n]}", (0, 0, 0), font=font)
+					draw.text(((x + self.width) - fontLen, y), f"{slimes[n]}", (0, 0, 0), font=font)
 					n += 1
 				else:
 					break
@@ -750,10 +750,10 @@ class Slimes(commands.Cog, name='Slimes'):
 		fName = f'{self.outputDir}trade_{your_slime}_{their_slime}.png'
 		# Place text
 		font = ImageFont.truetype(self.fontPath, 20, encoding='unic')
-		fontLen, _ = font.getsize('#' + your_slime)
+		fontLen, _ = font.getsize(your_slime)
 		draw = ImageDraw.Draw(combined)
-		draw.text((self.width - fontLen, 0), f"#{your_slime}", (0, 0, 0), font=font)
-		draw.text((((self.width * 2) + 150) - fontLen, 0), f"#{their_slime}", (0, 0, 0), font=font)
+		draw.text((self.width - fontLen, 0), f"{your_slime}", (0, 0, 0), font=font)
+		draw.text((((self.width * 2) + 150) - fontLen, 0), f"{their_slime}", (0, 0, 0), font=font)
 		# Save image
 		combined.save(fName)
 		combined.close()

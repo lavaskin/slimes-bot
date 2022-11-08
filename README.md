@@ -24,11 +24,11 @@ There is a [Trello board](https://trello.com/invite/b/PQAkZuv1/9c4206afa51bd6153
 
 ### **Credits**
 - Art:
-  - PhinalDestination: SlimeV2 pixel art.
+  - tutbot: SlimeV2 pixel art and various assets for slimes-bot.
   - [Holmesian](https://holmesian.carrd.co/ ): Tons of assets added in [this commit](https://github.com/Lavaskin/slimes-bot/commit/e0ab292ff4e4977a9c3004bfe95d3316373c5c93)!
 - Testing:
   - Sinful Dante
   - Mr. Pt
-  - Phinal Destination
+  - tutbot
 - Other:
   - KingTenechi: Ideas and help with color verification.

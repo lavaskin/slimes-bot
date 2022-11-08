@@ -25,7 +25,7 @@ ID_SIDE         = 8
 ID_LENGTH       = 9 # UPDATE AS NEEDED
 # Shop Constants
 SLIME_PRICE   = 10
-SELLING_RATIO = 1 # Amount to remove from price when selling
+SELLING_RATIO = 0.9 # Amount to remove from price when selling
 RANCH_RATIO   = 3 # Increase in price of slimes bought from the ranch
 
 # Load Descriptions File
@@ -111,16 +111,23 @@ class Slimes(commands.Cog, name='Slimes'):
 	def getRarity(self, id):
 		text = 'This slimes rarity is unknown...'
 		score = 0
+		rares = 0
 
-		# Check background (solid is 0, stripes is 1 and special is 4)
+		# Check background
 		if id[ID_BG_VARIENT] == '1': score += 1
-		elif id[ID_BG_VARIENT] == '2': score += 8
+		elif id[ID_BG_VARIENT] == '2':
+			score += 8
+			rares += 1
 
 		# Check if body is special
-		if id[ID_BODY_VARIENT] == '1': score += 6
+		if id[ID_BODY_VARIENT] == '1':
+			score += 6
+			rares += 1
 
 		# Check if the slime doesn't have eyes
-		if id[ID_EYES] == 'z': score += 9
+		if id[ID_EYES] == 'z':
+			score += 9
+			rares += 1
 
 		# Check if it has a mouth
 		if id[ID_MOUTH] != 'z': score += 1
@@ -131,6 +138,7 @@ class Slimes(commands.Cog, name='Slimes'):
 		# Check if it has a side
 		if id[ID_SIDE] != 'z': score += 3
 
+		# Determine rank based on score
 		if score == 0:
 			text = 'This is an **extremely ordinary** slime!'
 		elif score < 3:
@@ -138,16 +146,21 @@ class Slimes(commands.Cog, name='Slimes'):
 		elif score < 6:
 			text = 'This is an **uncommon** slime.'
 		elif score < 9:
-			text = 'This is a **rare** slime!'
+			text = 'This is a **rare** slime.'
 		elif score < 12:
-			text = 'This is a **pretty rare** slime!'
+			text = 'This is a **very rare** slime!'
 		elif score < 20:
-			text = 'This is a **very rare** slime!!'
-		elif score >= 20:
-			text = 'This is an :sparkles:**overwhelmingly rare** slime!!!'
+			text = 'This is a **extremely rare** slime!!'
+		else:
+			text = 'This is a :sparkles:**MAX RARITY** slime!!!'
+
+		# Multiple value based on number of rares
+		valueMultiplier = 1
+		if rares == 3: valueMultiplier = 20
+		elif rares == 2: valueMultiplier = 5
 
 		# Get value
-		value = int(score * SELLING_RATIO)
+		value = int(score * SELLING_RATIO) * valueMultiplier
 		value = 1 if value == 0 else value # Pity points
 
 		return text, score, value
@@ -582,9 +595,9 @@ class Slimes(commands.Cog, name='Slimes'):
 		
 		# Multiple slimes response
 		else:
-			# Sort slimes by rarity and get top 9 (only if amount generated > 9)
+			# Sort slimes by value and get top 9 (only if amount generated > 9)
 			if (len(slimeIDs) > 9):
-				slimeIDs.sort(key=lambda x: self.getRarity(x)[1], reverse=True)
+				slimeIDs.sort(key=lambda x: self.getRarity(x)[2], reverse=True)
 				slimeIDs = slimeIDs[:9]
 
 			# Make collage of generated slimes
@@ -897,12 +910,12 @@ class Slimes(commands.Cog, name='Slimes'):
 			'Common',
 			'Uncommon',
 			'Rare',
-			'Pretty Rare',
 			'Very Rare',
-			':sparkles: Overwhelmingly Rare',
+			'Extremely Rare',
+			':sparkles: **MAX RARITY**',
 		]
 
-		embed = discord.Embed(title='Slime bRarities', description='\n'.join(rarities), color=discord.Color.green())
+		embed = discord.Embed(title='Slime Rarities', description='\n'.join(rarities), color=discord.Color.green())
 		await ctx.reply(embed=embed)
 
 	@commands.command(brief=desc['top']['short'], description=desc['top']['long'], aliases=desc['top']['alias'])
@@ -1185,8 +1198,15 @@ class Slimes(commands.Cog, name='Slimes'):
 		
 		# Make yes/no buttons for confirmation
 		buttons = ['✔️', '❌']
-		path = f'{self.outputDir}{id}.png'
-		file = discord.File(path)
+
+		# Attempt to open the slimes image
+		try:
+			path = f'{self.outputDir}{id}.png'
+			file = discord.File(path)
+		except:
+			file=None
+
+		# Send confirmation message
 		msg = await ctx.reply(f'Are you sure you want to adopt **{id}** for {price} :coin:?', file=file)
 		for button in buttons:
 			await msg.add_reaction(button)
@@ -1199,14 +1219,14 @@ class Slimes(commands.Cog, name='Slimes'):
 		else:
 			# Reject adoption
 			if str(reaction.emoji) == buttons[1]:
-				await ctx.reply(f'Decided to not adopt *{id}*...', delete_after=5)
+				await msg.edit(content=f'Decided to not adopt *{id}*...')
 
 			# Adopt the slime
 			elif str(reaction.emoji) == buttons[0]:
 				# Update db
 				ref.update({'coins': coins - price, 'slimes': firestore.ArrayUnion([id])})
 				self.removeFromRanch(id)
-				await ctx.reply(f'You adopted **{id}**!', delete_after=5)
+				await msg.edit(content=f'You adopted **{id}**!')
 
 	@commands.command(brief=desc['ranch']['short'], description=desc['ranch']['long'], aliases=desc['ranch']['alias'])
 	@commands.cooldown(1, desc['ranch']['cd'] * _cd, commands.BucketType.user)

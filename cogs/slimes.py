@@ -1213,7 +1213,7 @@ class Slimes(commands.Cog, name='Slimes'):
 		slimes = self.filterSlimes(slimes, filter)
 
 		# Build ranch URL
-		siteAdd = self.siteLink + f'ranch'
+		siteAdd = self.siteLink + 'ranch'
 		siteAdd = siteAdd + '?filter=' + filter if filter else siteAdd
 
 		pages = self.buildPages(slimes, 'The Ranch', siteAdd)

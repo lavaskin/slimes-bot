@@ -150,7 +150,7 @@ class Slimes(commands.Cog, name='Slimes'):
 		elif score < 12:
 			text = 'This is a **very rare** slime!'
 		elif score < 20:
-			text = 'This is a **extremely rare** slime!!'
+			text = 'This is an **extremely rare** slime!!'
 		else:
 			text = 'This is a :sparkles:**MAX RARITY** slime!!!'
 

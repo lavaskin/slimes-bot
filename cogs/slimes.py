@@ -316,7 +316,7 @@ class Slimes(commands.Cog, name='Slimes'):
 
 	# Returns the users level given their xp, and their % to the next level
 	def calculateLevel(self, xp) -> tuple:
-		level = round( (0.3 * math.sqrt(xp)) + 1, 2)
+		level = round( (0.22 * math.sqrt(xp)) + 1, 2)
 		lo = math.floor(level)
 		percent = int(round((level - lo) * 100, 2))
 		return lo, percent

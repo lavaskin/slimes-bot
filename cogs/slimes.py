@@ -166,8 +166,9 @@ class Slimes(commands.Cog, name='Slimes'):
 		return text, score, value
 
 	# Test if a given parameter randomly passes
-	def passesParam(self, param):
-		return random.randint(1, 100) < (self.params[param] * 100)
+	# Modifier affects the chance of passing
+	def passesParam(self, param, modifier=1):
+		return random.randint(1, 100) < (min(self.params[param] * modifier, 1) * 100)
 
 	# Favorites a given slime or removes it if already favorited
 	def favSlime(self, id, ref, favs):
@@ -434,17 +435,22 @@ class Slimes(commands.Cog, name='Slimes'):
 
 	# Based on random parameters, generates a slime ID
 	# Returns the ID and background color for rollLayers to use
-	def genSlimeID(self):
+	# If increaseOdds is true, the odds of getting a rare property is doubled,
+	# but once two have been pulled the odds are reset to normal
+	def genSlimeID(self, increaseOdds=False):
 		# Loops until a unique ID is created
 		while True:
 			bgColor, altColor = self.getPaintColors()
 			id = ''
+			rares = 0
 
 			# Choose background
-			if self.passesParam('bg_special'):
+			mod = 2 if increaseOdds else 1
+			if self.passesParam('bg_special', mod):
 				# Apply special background
 				roll = random.randrange(0, self.specialBgs)
 				id += ('2' + self.encodeNum(roll) + 'z')
+				rares += 1
 			elif self.passesParam('bg_stripes'):
 				# Apply stripe layer
 				id += ('1' + self.encodeNum(bgColor) + self.encodeNum(altColor))
@@ -453,14 +459,18 @@ class Slimes(commands.Cog, name='Slimes'):
 				id += ('0' + self.encodeNum(bgColor) + 'z')
 
 			# Add slime body
+			# Same mod as before	
 			if self.passesParam('bg_special'):
 				roll = random.randrange(0, self.specialBodies)
 				id += ('1' + self.encodeNum(roll))
+				rares += 1
 			else:
 				roll = random.randrange(0, self.regBodies)
 				id += ('0' + self.encodeNum(roll))
 
 			# Eyes
+			# Mod now checks if there has been two rares pulled
+			mod = 2 if increaseOdds and rares < 2 else 1
 			if self.passesParam('eyes'):
 				roll = random.randrange(0, self.eyes)
 				id += self.encodeNum(roll)
@@ -470,7 +480,10 @@ class Slimes(commands.Cog, name='Slimes'):
 					roll = random.randrange(0, self.mouths)
 					id += self.encodeNum(roll)
 				else: id += 'z'
-			else: id += 'zz' # For both eyes and mouth
+			else:
+				# For both eyes and mouth
+				id += 'zz'
+				rares += 1
 
 			# Hat
 			if self.passesParam('hat'):
@@ -490,10 +503,10 @@ class Slimes(commands.Cog, name='Slimes'):
 			else: print('| DUPE SLIME:', id)
 
 	# Generates a slime
-	def genSlime(self, id=None):
+	def genSlime(self, id=None, increaseOdds=False):
 		# Check if an ID is given
 		if not id:
-			id, bg = self.genSlimeID()
+			id, bg = self.genSlimeID(increaseOdds)
 		else:
 			# Check if it already exists
 			if exists(self.outputDir + id + '.png'):
@@ -566,8 +579,9 @@ class Slimes(commands.Cog, name='Slimes'):
 		# Generate slimes
 		slimes = []
 		totalRarity = 0
-		for _ in range(int(count)):
-			generatedSlime = self.genSlime()
+		for i in range(int(count)):
+			# If on the 99'th slime, increase the odds for a rare
+			generatedSlime = self.genSlime(None, i == 98 and count == 99)
 			slimes.append(generatedSlime)
 			totalRarity += self.getRarity(generatedSlime[1])[1]
 

@@ -11,6 +11,7 @@ The bot has an econemy system, use s!claim to claim coins every hour and s!gener
 - In users and users-dev, create a document called "ranch" with the array fields: slimes, favs. This is where sold slimes will be added to.
 
 ### **How to build the bot**:
+1. Install [discordpy](https://discordpy.readthedocs.io/en/stable/intro.html).
 1. Fill out all the relevant information in a '.env' file. Use .env-example.txt as a reference.
 1. Create an /other/firebase.json file from the json Firebase gives you on their site after you initialize a firestore database.
 1. Run bot.py using python3 directly.

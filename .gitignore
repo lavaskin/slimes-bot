@@ -3,3 +3,6 @@ __pycache__
 .vscode
 output
 other/firebase.json
+
+run
+test.py

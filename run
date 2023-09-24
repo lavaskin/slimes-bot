@@ -1,0 +1,5 @@
+#!/bin/sh
+
+git pull
+clear
+poetry run python3 bot.py

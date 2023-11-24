@@ -259,7 +259,7 @@ class Slimes(commands.Cog, name='Slimes'):
 		userID = ctx.author.id
 		numFavs = len(slimes)
 		font = ImageFont.truetype(self.fontPath, 20)
-		fontLen,  _ = font.getsize(slimes[0])
+		fontLen = font.getlength(slimes[0])
 		width = (3 * self.width) if numFavs > 2 else numFavs * self.width
 		height = math.ceil(numFavs / 3) * self.height
 		n = 0
@@ -507,7 +507,7 @@ class Slimes(commands.Cog, name='Slimes'):
 
 			# Eyes
 			# Mod now checks if there has been two rares pulled
-			mod = 2 if increaseOdds and rares < 2 else 1
+			mod = 0.96 if increaseOdds and rares < 2 else 1
 			if self.passesParam('eyes'):
 				roll = random.randrange(0, self.eyes)
 				id += self.encodeNum(roll)

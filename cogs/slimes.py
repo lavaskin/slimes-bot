@@ -27,6 +27,7 @@ ID_LENGTH       = 9 # UPDATE AS NEEDED
 SLIME_PRICE   = 10
 SELLING_RATIO = 0.9 # Amount to remove from price when selling
 RANCH_RATIO   = 3 # Increase in price of slimes bought from the ranch
+BASE_PAYOUT   = 40 # Base amount of coins given when claiming
 
 # Load Descriptions File
 descFile = open('./other/commands.json')
@@ -289,6 +290,42 @@ class Slimes(commands.Cog, name='Slimes'):
 		minutes = int(secs / 60)
 		seconds = int(secs % 60)
 		return minutes, seconds
+	
+	def isHoliday(self, date):
+		# Check if it's a holiday
+		month = date.tm_mon
+		day = date.tm_mday
+
+		# Generic holidays
+		if month == 1 and day == 1: return True # New Years
+		if month == 2 and day == 14: return True # Valentines
+		if month == 3 and day == 17: return True # St. Patricks
+		if month == 4 and day == 1: return True # April Fools
+		if month == 10 and day == 31: return True # Halloween
+		if month == 12 and day == 25: return True # Christmas
+		if month == 12 and day == 31: return True # New Years Eve
+
+		# For testing
+		# if month == 11 and day == 24: return True # Testing
+
+		# Thanksgiving checker
+		if month == 11:
+			# Get the day of the week
+			dow = date.tm_wday
+			if day > 21 and day < 29 and dow == 4: return True
+
+		return False
+	
+	def getBasePayout(self):
+		# Get the date
+		date = time.localtime()
+		base = BASE_PAYOUT
+
+		# If it's a holiday
+		if self.isHoliday(date):
+			base = base * 2
+
+		return base
 
 	# Returns an object of (claimed coins, error message)
 	def claimCoins(self, ref, user):
@@ -308,7 +345,7 @@ class Slimes(commands.Cog, name='Slimes'):
 		# Calc payout
 		# Every 1000 coins collected, lower the payout amount by 10% (Minimum of 10% payout))
 		# Only triggers over 500 coins
-		payout = 40 + random.randint(-SLIME_PRICE, SLIME_PRICE)
+		payout = self.getBasePayout() + random.randint(-SLIME_PRICE, SLIME_PRICE)
 		multiplier = max(round(1 - round((coins / 1000) * 0.1, 3), 3), 0.1) if coins > 500 else 1
 		payout = math.ceil(payout * multiplier)
 
@@ -534,7 +571,8 @@ class Slimes(commands.Cog, name='Slimes'):
 			await ctx.reply(err, delete_after=10)
 		else:
 			newBal = int(user['coins'] + payout)
-			await ctx.reply(f'You collected **{payout}** coins! You now have **{newBal}**.')
+			append = '' if payout <= BASE_PAYOUT else f' (:sparkles: **Holiday Bonus!**)'
+			await ctx.reply(f'You collected **{payout}** coins{append}! You now have **{newBal}**.')
 
 	@commands.command(brief=desc['generate']['short'], description=desc['generate']['long'], aliases=desc['generate']['alias'])
 	@commands.cooldown(1, desc['generate']['cd'] * _cd, commands.BucketType.user)

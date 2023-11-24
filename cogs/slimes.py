@@ -305,14 +305,12 @@ class Slimes(commands.Cog, name='Slimes'):
 		if month == 12 and day == 25: return True # Christmas
 		if month == 12 and day == 31: return True # New Years Eve
 
-		# For testing
-		# if month == 11 and day == 24: return True # Testing
-
 		# Thanksgiving checker
 		if month == 11:
-			# Get the day of the week
+			# Get the day of the week (dow = 3 is thursday, monday is 0)
 			dow = date.tm_wday
-			if day > 21 and day < 29 and dow == 4: return True
+			if day > 21 and day < 29 and dow == 3:
+				return True
 
 		return False
 	

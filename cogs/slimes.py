@@ -325,30 +325,32 @@ class Slimes(commands.Cog, name='Slimes'):
 
 		return base
 
-	# Returns an object of (claimed coins, error message)
+	# Returns an object of (claimed coins, error message, extra coins)
 	def claimCoins(self, ref, user):
 		coins = int(user['coins'])
 
 		# Check coin count
 		if coins >= 9999:
-			return 0, 'You have reached the maximum amount of claimable coins!'
+			return 0, 'You have reached the maximum amount of claimable coins!', False
 
 		# Check cooldown
 		since = self.timeSince(user['lastclaim'])
 		left = (desc['claim']['cd'] - since) * _cd
 		if left > 0:
 			minutes, seconds = self.convertTime(left)
-			return 0, f'There\'s *{minutes}m, {seconds}s* left before you can claim coins again!'
+			return 0, f'There\'s *{minutes}m, {seconds}s* left before you can claim coins again!', False
 
 		# Calc payout
 		# Every 1000 coins collected, lower the payout amount by 10% (Minimum of 10% payout))
 		# Only triggers over 500 coins
-		payout = self.getBasePayout() + random.randint(-SLIME_PRICE, SLIME_PRICE)
+		basePayout = self.getBasePayout()
+		payout = basePayout + random.randint(-SLIME_PRICE, SLIME_PRICE) 
 		multiplier = max(round(1 - round((coins / 1000) * 0.1, 3), 3), 0.1) if coins > 500 else 1
 		payout = math.ceil(payout * multiplier)
 
+		# Return extra coins if the base payout for the claim is more than the actual base payout (this is so awful omg)
 		ref.update({'coins': firestore.Increment(payout), 'lastclaim': time.time()})
-		return payout, None
+		return payout, None, basePayout > BASE_PAYOUT
 
 	# Returns the users level given their xp, and their % to the next level
 	def calculateLevel(self, xp) -> tuple:
@@ -562,14 +564,14 @@ class Slimes(commands.Cog, name='Slimes'):
 	async def claim(self, ctx):
 		user, ref = self.getUser(ctx)
 
-		# Get Payout
-		payout, err = self.claimCoins(ref, user)
+		# Get Payout (and if the payout was extra due to holiday bonus)
+		payout, err, extra = self.claimCoins(ref, user)
 
 		if err != None:
 			await ctx.reply(err, delete_after=10)
 		else:
 			newBal = int(user['coins'] + payout)
-			append = '' if payout <= BASE_PAYOUT else f' (:sparkles: **Holiday Bonus!**)'
+			append = '' if not extra else f' (:sparkles: **Holiday Bonus!**)'
 			await ctx.reply(f'You collected **{payout}** coins{append}! You now have **{newBal}**.')
 
 	@commands.command(brief=desc['generate']['short'], description=desc['generate']['long'], aliases=desc['generate']['alias'])
@@ -596,7 +598,7 @@ class Slimes(commands.Cog, name='Slimes'):
 		desc = ''
 		if count != 'max' and (coins < SLIME_PRICE * count):
 			# Try to claim coins
-			payout, err = self.claimCoins(ref, user)
+			payout, err, _ = self.claimCoins(ref, user)
 			if err != None:
 				# Get time left till next claim
 				since = self.timeSince(user['lastclaim'])
